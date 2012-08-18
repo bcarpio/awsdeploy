@@ -1,0 +1,4 @@
+*.pyc
+user-data.sh
+*.out
+temp

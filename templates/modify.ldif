@@ -1,0 +1,4 @@
+dn: cn=HOST,ou=hosts,BASEDN
+changetype: modify
+add: puppetClass
+puppetClass: PUPPETCLASS

@@ -1,0 +1,11 @@
+#!/bin/bash
+set -x
+hostname HOSTNAME
+echo HOSTNAME > /etc/hostname
+IP=`curl http://169.254.169.254/latest/meta-data/local-ipv4`
+echo "$IP HOSTNAME.DOMAIN HOSTNAME" >> /etc/hosts
+add-apt-repository ppa:alestic/ppa
+apt-get update
+apt-get install -y runurl
+runurl http://PUPPETMASTER/scripts/setup_ssh_keys.sh
+runurl http://PUPPETMASTER/scripts/enable_puppet.sh

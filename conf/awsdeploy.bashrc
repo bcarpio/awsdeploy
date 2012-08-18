@@ -1,0 +1,12 @@
+export EC2_HOME=../ec2-api-tools
+export AWSDEPLOYPATH=../conf/
+export EC2_KEYPAIR=awsdeploy_key
+export EC2_URL=https://ec2.us-west-1.amazonaws.com
+export EC2_PRIVATE_KEY=${AWSDEPLOYPATH}/private-key.pem
+export EC2_CERT=${AWSDEPLOYPATH}/cert.pem
+export JAVA_HOME=/usr/lib/jvm/java-6-openjdk/
+export SUBNET=subnet-d43b8abd
+export SGROUP=sg-926578fe
+export EC2KEY=${AWSDEPLOYPATH}/awsdeploy_key.pem
+export AWS_ACCESS_KEY_ID=AKIAIFY6HFGEYDA5JYKA
+export AWS_SECRET_ACCESS_KEY=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
