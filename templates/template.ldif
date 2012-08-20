@@ -6,5 +6,4 @@ objectClass: device
 objectClass: ipHost
 objectClass: puppetClient
 objectClass: top
-puppetClass: PUPPETCLASS
 parentnode: default
