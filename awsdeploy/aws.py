@@ -42,23 +42,28 @@ def deploy_west_ec2_ami(name, size='m1.small'):
 
 def deploy_east_1a_public_1(name, size='m1.small', subnet='subnet-c7fac5af', zone='us-east-1a', sgroup='sg-98c326f7'):
     r=config.get_prod_east_conf()
-    deploy_ec2_ami(name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster)
+    ip = deploy_ec2_ami(name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster, r.admin)
+    return ip
 
 def deploy_east_1a_private_2(name, size='m1.small', subnet='subnet-dafac5b2', zone='us-east-1a'):
     r=config.get_prod_east_conf()
-    deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster)
+    ip = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
+    return ip
 
 def deploy_east_1c_public_3(name, size='m1.small', subnet='subnet-1d373375', zone='us-east-1c', sgroup='sg-98c326f7'):
     r=config.get_prod_east_conf()
-    deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster)
+    ip = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster, r.admin)
+    return ip
 
 def deploy_east_1c_private_4(name, size='m1.small', subnet='subnet-ed373385', zone='us-east-1c'):
     r=config.get_prod_east_conf()
-    deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster)
+    ip = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
+    return ip
 
 def deploy_east_1d_private_6(name, size='m1.small', subnet='subnet-8d2632e5', zone='us-east-1d'):
     r=config.get_prod_east_conf()
-    deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster)
+    ip = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
+    return ip
 
 def get_aws_deployment_status():
     with settings(
@@ -70,7 +75,6 @@ def get_aws_deployment_status():
 
 def ldap_modify(hostname,puppetClass,az):
     if az in ('use1a', 'use1c', 'use1d'):
-        print az
         r=config.get_prod_east_conf()
     if az in ('dev', 'qa'):
         r=config.get_devqa_west_conf()
@@ -111,7 +115,7 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
             iplist.append(ip)
             hostnamelist.append(name)
             total = int(total) + 1
-        
+
         for host in hostnamelist:
                 if isinstance(puppetClass, basestring):
                     ldap_modify(hostname=host, puppetClass=puppetClass, az=az)
