@@ -8,6 +8,15 @@ import os
 import sys
 import time
 
+###
+# This Task Does The Following
+# * Checks LDAP For Existing Node
+# * Creates EC2 Instance
+# * Dynamically Generates A user-data script which names the node
+# * Tags The Node With The Host Name
+# * Updates LDAP With The Nodename And IP
+# * Adds The Node To Route 53
+
 def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldap, secret, subnet, sgroup, domain, puppetmaster, admin):
     with settings(
         hide('running', 'stdout')
@@ -34,6 +43,9 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldap, secret, subnet, 
             local('echo %s >> ../tmp/ip.out' %(ip))
     return ip
 
+###
+# These Are The Subnet Specific Tasks For Each AZ In EC2
+###
 
 def deploy_west_ec2_ami(name, size='m1.small'):
     r=config.get_devqa_west_conf()
@@ -65,6 +77,51 @@ def deploy_east_1d_private_6(name, size='m1.small', subnet='subnet-8d2632e5', zo
     ip = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
     return ip
 
+####
+# EC2 Storage Tasks
+####
+
+def create_ebs_volume(size='50',zone='us-east-1a', region='east'):
+    if region == 'east':
+        r=config.get_prod_east_conf()
+    if region == 'west':
+        r=config.get_devqa_west_conf
+    local('. ../conf/awsdeploy.bashrc; /usr/bin/ec2-create-volume --region %s --size %s --availability-zone %s | awk "{print $2}" > ../tmp/ebs_vol.out' %(r.region, size, zone))
+
+def create_ebs_volume_east_1a(zone='us-east-1a'):
+    create_ebs_volume, zone='%s' %(zone)
+
+def create_ebs_volume_east_1c(zone='us-east-1c'):
+    create_ebs_volume, zone='%s' %(zone)
+
+def create_ebs_volume_east_1d(zone='us-east-1d'):
+    create_ebs_volume, zone='%s' %(zone)
+
+def create_ebs_volume_west(zone='us-west-1a'):
+    create_ebs_volume, zone=zone, region='west'
+
+def attach_ebs_volume(device, region='us-east-1'):
+    volume = local("cat ../tmp/ebs_vol.out | awk '{print $2}'", capture=True)
+    instance = local('cat ../tmp/instance.out', capture=True)
+    local('. ../conf/awsdeploy.bashrc; /usr/bin/ec2-attach-volume %s --region %s -i %s -d %s' %(volume,region,instance,device))
+    local('rm ../tmp/ebs_vol.out')
+
+####
+# Elastic IP Tasks
+####
+
+def allocate_elastic_ip(region='us-east-1'):
+    allocid = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-allocate-address -d vpc --region %s | awk '{print $4}'" %(region), capture=True)
+    return allocid
+
+def associate_elastic_ip(elasticip, instance, region='us-east-1'):
+    local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-associate-address -a %s -i %s --region %s' %(elasticip, instance, region))
+
+
+###
+# This Checks The Status Of /home/appuser/finished which is applied by puppet
+###
+
 def get_aws_deployment_status():
     with settings(
         hide('running', 'stdout')
@@ -72,6 +129,10 @@ def get_aws_deployment_status():
         env.warn_only = True
         status = sudo('ls -al /home/appuser/finished > /dev/null 2>&1; echo $?')
         return status
+
+###
+# This Updates LDAP With The Right Puppet Classes
+###
 
 def ldap_modify(hostname,puppetClass,az):
     if az in ('use1a', 'use1c', 'use1d'):
@@ -82,6 +143,9 @@ def ldap_modify(hostname,puppetClass,az):
         local("sed -e s/HOST/%s/g -e s/PUPPETCLASS/%s/g -e s/BASEDN/%s/g ../templates/modify.ldif | /usr/bin/ldapmodify -v -x -w %s -D %s%s -h %s" %(hostname,puppetClass,r.basedn,r.secret,r.admin,r.basedn,r.ldap))
 
 
+### 
+# This the generic application deployment task
+###
 def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', size='m1.small'):
     cleanup()
     if az in ('use1a', 'use1c', 'use1d'):
@@ -148,6 +212,10 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
             runs += 1
     cleanup()
     return iplist
+
+###
+# This cleans up after instance creation
+###
 
 def cleanup():
     with settings(
