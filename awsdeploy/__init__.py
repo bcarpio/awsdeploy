@@ -9,7 +9,7 @@ import time
 import puppet
 import git
 import config
-import aws
+from aws import *
 
 ####
 #  Cheetah Deployment

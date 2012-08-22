@@ -273,6 +273,7 @@ def cleanup():
 
 ####
 # Remove EC2 Instance, Clean Puppet, Clean LDAP, Clea Route53, Clean Zabbix
+####
 
 def remove_east_ec2_instance(name, region='us-east-1'):
     r=config.get_prod_east_conf()
@@ -302,6 +303,77 @@ def remove_west_ec2_instance(name, region='us-west-1'):
         ip = local("host "+name+".asskickery.us | awk '{print $4}'", capture=True)
         local('. ../conf/awsdeploy.bashrc; /usr/local/bin/route53 del_record Z4512UDZ56AKC '+name+'.asskickery.us. A '+ip)
         local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-terminate-instances --region %s %s' %(region,instance))
+
+####
+# File System Related tasks
+####
+
+def setup_four_drive_mirror():
+    env.warn_only = True
+    sudo('puppetd --test')
+    env.warn_only = True
+    sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
+    sudo('mdadm --create --force --assume-clean -R /dev/md0 -l10 --chunk=256 --raid-devices=4 /dev/xvdf /dev/xvdg /dev/xvdh /dev/xvdi')
+    sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
+    sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
+    sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
+    env.warn_only = False
+    sudo('mdadm --create --force --assume-clean -R /dev/md0 -l10 --chunk=256 --raid-devices=4 /dev/xvdf /dev/xvdg /dev/xvdh /dev/xvdi')
+    sudo('echo "`mdadm --detail --scan`" | tee -a /etc/mdadm.conf')
+    sudo('blockdev --setra 128 /dev/md0')
+    sudo('blockdev --setra 128 /dev/xvdf')
+    sudo('blockdev --setra 128 /dev/xvdg')
+    sudo('blockdev --setra 128 /dev/xvdh')
+    sudo('blockdev --setra 128 /dev/xvdi')
+    sudo('dd if=/dev/urandom of=/etc/data.key bs=1 count=32')
+    time.sleep(5)
+    sudo('cat /etc/data.key | cryptsetup luksFormat /dev/md0')
+    sudo('cat /etc/data.key | cryptsetup luksOpen /dev/md0 data')
+
+def setup_two_drive_mirror():
+    env.warn_only = True
+    sudo('puppetd --test')
+    env.warn_only = True
+    sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
+    sudo('mdadm --create --force --assume-clean -R /dev/md0 -l10 --chunk=256 --raid-devices=4 /dev/xvdf /dev/xvdg /dev/xvdh /dev/xvdi')
+    sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
+    sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
+    sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
+    env.warn_only = False
+    sudo('mdadm --create --force --assume-clean -R /dev/md0 -l10 --chunk=256 --raid-devices=2 /dev/xvdf /dev/xvdg')
+    sudo('echo "`mdadm --detail --scan`" | tee -a /etc/mdadm.conf')
+    sudo('blockdev --setra 128 /dev/md0')
+    sudo('blockdev --setra 128 /dev/xvdf')
+    sudo('blockdev --setra 128 /dev/xvdg')
+    sudo('dd if=/dev/urandom of=/etc/data.key bs=1 count=32')
+    time.sleep(5)
+    sudo('cat /etc/data.key | cryptsetup luksFormat /dev/md0')
+    sudo('cat /etc/data.key | cryptsetup luksOpen /dev/md0 data')
+
+def setup_mongodb_lvm():
+    sudo('pvcreate /dev/mapper/data')
+    sudo('vgcreate datavg /dev/mapper/data')
+    sudo('lvcreate -l 80%vg -n datalv datavg')
+    sudo('lvcreate -l 5%vg -n journallv datavg')
+    sudo('mke2fs -t ext4 -F /dev/datavg/datalv')
+    sudo('mke2fs -t ext4 -F /dev/datavg/journallv')
+    sudo('echo "/dev/datavg/datalv  /data   ext4    defaults,auto,noatime,noexec    0       0" | tee -a /etc/fstab')
+    sudo('echo "/dev/datavg/journallv       /journal        ext4    defaults,auto,noatime,noexec    0       0" | tee -a /etc/fstab')
+    sudo('mkdir -p /journal')
+    sudo('mount -a')
+    sudo('mkdir -p /data/db.1/')
+    sudo('ln -s /journal /data/db.1/journal')
+    sudo('chown -R mongodb:mongodb /data/')
+    sudo('chown -R mongodb:mongodb /journal/')
+
+def setup_gluster_lvm():
+    sudo('pvcreate /dev/mapper/data')
+    sudo('vgcreate datavg /dev/mapper/data')
+    sudo('lvcreate -l 100%vg -n datalv datavg')
+    sudo('mke2fs -t ext4 -F /dev/datavg/datalv')
+    sudo('echo "/dev/datavg/datalv  /data   ext4    defaults,auto,noatime,noexec    0       0" | tee -a /etc/fstab')
+    sudo('mkdir -p /data/')
+    sudo('mount -a')
 
 
 def main():
