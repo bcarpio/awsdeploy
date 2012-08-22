@@ -31,6 +31,13 @@ def get_devqa_west_conf():
     r.admin = "cn=admin,"
     return r
 
+def get_conf(az):
+    if az in ('use1a', 'use1c', 'use1d'):
+        r=get_prod_east_conf()
+    if az in ('dev', 'qa'):
+        r=get_devqa_west_conf()
+    return r
+
 def auth():
     user = 'ubuntu'
     key_filename = os.path.join(os.path.dirname(__file__),'../conf/awsdeploy_key.pem')

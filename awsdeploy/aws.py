@@ -7,6 +7,7 @@ import config
 import os
 import sys
 import time
+import puppet
 
 ###
 # This Task Does The Following
@@ -33,7 +34,6 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldap, secret, subnet, 
             if region == 'us-east-1':
                 ip = local("cat ../tmp/ec2-run-instances.out | grep INSTANCE | awk '{print $12}'", capture=True)
             rid = local("cat ../tmp/ec2-run-instances.out | grep INSTANCE | awk '{print $2}'", capture=True)
-            local('echo %s > ../tmp/instance.out' %(rid))
             local('cat ../templates/template.ldif | sed -e s/HOST/\'%s\'/g -e s/IP/\'%s\'/g -e s/BASEDN/%s/g | ldapadd -x -w %s -D "%s" -h %s' %(name,ip,basedn,secret,admin+basedn,ldap))
             local('. ../conf/awsdeploy.bashrc; /usr/local/bin/route53 add_record Z4512UDZ56AKC '+name+'.asskickery.us A '+ip)
             local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-create-tags %s --region %s --tag Name=%s' %(rid,region,name))
@@ -41,7 +41,7 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldap, secret, subnet, 
             local('rm ../tmp/ec2-run-instances.out')
             print (blue("SUCCESS: Node '%s' Deployed To %s")%(name,region))
             local('echo %s >> ../tmp/ip.out' %(ip))
-    return ip
+    return {'ip' : ip, 'rid' : rid}
 
 ###
 # These Are The Subnet Specific Tasks For Each AZ In EC2
@@ -49,33 +49,33 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldap, secret, subnet, 
 
 def deploy_west_ec2_ami(name, size='m1.small'):
     r=config.get_devqa_west_conf()
-    ip = deploy_ec2_ami(name, r.ami, size, r.zone, r.region, r.basedn, r.ldap, r.secret, r.subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
-    return ip
+    ip_rid = deploy_ec2_ami(name, r.ami, size, r.zone, r.region, r.basedn, r.ldap, r.secret, r.subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
+    return ip_rid
 
 def deploy_east_1a_public_1(name, size='m1.small', subnet='subnet-c7fac5af', zone='us-east-1a', sgroup='sg-98c326f7'):
     r=config.get_prod_east_conf()
-    ip = deploy_ec2_ami(name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster, r.admin)
-    return ip
+    ip_rid = deploy_ec2_ami(name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster, r.admin)
+    return ip_rid
 
 def deploy_east_1a_private_2(name, size='m1.small', subnet='subnet-dafac5b2', zone='us-east-1a'):
     r=config.get_prod_east_conf()
-    ip = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
-    return ip
+    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
+    return ip_rid
 
 def deploy_east_1c_public_3(name, size='m1.small', subnet='subnet-1d373375', zone='us-east-1c', sgroup='sg-98c326f7'):
     r=config.get_prod_east_conf()
-    ip = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster, r.admin)
-    return ip
+    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster, r.admin)
+    return ip_rid
 
 def deploy_east_1c_private_4(name, size='m1.small', subnet='subnet-ed373385', zone='us-east-1c'):
     r=config.get_prod_east_conf()
-    ip = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
-    return ip
+    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
+    return ip_rid
 
 def deploy_east_1d_private_6(name, size='m1.small', subnet='subnet-8d2632e5', zone='us-east-1d'):
     r=config.get_prod_east_conf()
-    ip = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
-    return ip
+    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
+    return ip_rid
 
 ####
 # EC2 Storage Tasks
@@ -111,11 +111,13 @@ def attach_ebs_volume(device, region='us-east-1'):
 ####
 
 def allocate_elastic_ip(region='us-east-1'):
-    allocid = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-allocate-address -d vpc --region %s | awk '{print $4}'" %(region), capture=True)
+    with lcd(os.path.join(os.path.dirname(__file__),'.')):
+        allocid = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-allocate-address -d vpc --region %s | awk '{print $4}'" %(region), capture=True)
     return allocid
 
 def associate_elastic_ip(elasticip, instance, region='us-east-1'):
-    local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-associate-address -a %s -i %s --region %s' %(elasticip, instance, region))
+    with lcd(os.path.join(os.path.dirname(__file__),'.')):
+        local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-associate-address -a %s -i %s --region %s' %(elasticip, instance, region))
 
 
 ###
@@ -135,10 +137,7 @@ def get_aws_deployment_status():
 ###
 
 def ldap_modify(hostname,puppetClass,az):
-    if az in ('use1a', 'use1c', 'use1d'):
-        r=config.get_prod_east_conf()
-    if az in ('dev', 'qa'):
-        r=config.get_devqa_west_conf()
+    r=config.get_conf(az)
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
         local("sed -e s/HOST/%s/g -e s/PUPPETCLASS/%s/g -e s/BASEDN/%s/g ../templates/modify.ldif | /usr/bin/ldapmodify -v -x -w %s -D %s%s -h %s" %(hostname,puppetClass,r.basedn,r.secret,r.admin,r.basedn,r.ldap))
 
@@ -148,10 +147,7 @@ def ldap_modify(hostname,puppetClass,az):
 ###
 def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', size='m1.small'):
     cleanup()
-    if az in ('use1a', 'use1c', 'use1d'):
-        r=config.get_prod_east_conf()
-    if az in ('dev', 'qa'):
-        r=config.get_devqa_west_conf()
+    r=config.get_conf(az)
     if os.path.exists('../tmp/ip.out'):
         local('rm ../tmp/ip.out')
     count = int(count)
@@ -169,13 +165,17 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
             num = "%02d" % num
             name = az+'-pri-'+appname+'-'+version+'-'+num
             if az == 'use1a':
-                ip = deploy_east_1a_private_2(name=name,size=size)
+                ip_rid = deploy_east_1a_private_2(name=name,size=size)
+                ip = ip_rid['ip']
             if az == 'use1c':
-                ip = deploy_east_1c_private_4(name=name,size=size)
+                ip_rid = deploy_east_1c_private_4(name=name,size=size)
+                ip = ip_rid['ip']
             if az == 'dev':
-                ip = deploy_west_ec2_ami(name=name,size=size)
+                ip_rid = deploy_west_ec2_ami(name=name,size=size)
+                ip = ip_rid['ip']
             if az == 'qa':
-                ip = deploy_west_ec2_ami(name=name,size=size)
+                ip_rid = deploy_west_ec2_ami(name=name,size=size)
+                ip = ip_rid['ip']
             iplist.append(ip)
             hostnamelist.append(name)
             total = int(total) + 1
@@ -213,6 +213,50 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
     cleanup()
     return iplist
 
+####
+#  3rd Party Deployment
+####
+
+def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='pri'):
+    cleanup()
+    r=config.get_conf(az)
+    last = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=%s-%s-%s-* | grep cn: | tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,az,dmz,appname), capture=True)
+    if last:
+        num = last[-2:]
+    else:
+        num = 0
+    num = int(num) + 1
+    num = "%02d" % num
+    name= az+'-'+dmz+'-'+appname+'-'+num
+
+    if dmz == 'pri':
+        if az == 'use1a':
+            deploy_east_1a_private_2(name=name,size=size)
+        if az == 'use1c':
+            deploy_east_1c_private_4(name=name,size=size)
+        if az == 'dev':
+            deploy_west_ec2_ami(name=name,size=size)
+        if az == 'qa':
+            deploy_west_ec2_ami(name=name,size=size)
+    elif dmz == 'pub':
+        if az == 'use1a':
+            ip_rid = deploy_east_1a_public_1(name=name,size=size)
+            rid = ip_rid['rid']
+            return rid
+        if az == 'use1c':
+            ip_rid = deploy_east_1c_public_3(name=name,size=size)
+            rid = ip_rid['rid']
+            return rid
+    else:
+        print "ERROR: Wrong dmz specified"
+
+    if isinstance(puppetClass, basestring):
+        ldap_modify(hostname=name, puppetClass=puppetClass, az=az)
+    else:
+        for pclass in puppetClass:
+            ldap_modify(hostname=name, puppetClass=pclass, az=az)
+    cleanup() 
+
 ###
 # This cleans up after instance creation
 ###
@@ -225,6 +269,39 @@ def cleanup():
             env.warn_only = True
             local('rm ../tmp/hostname.out')
             local('rm ../tmp/ip.out')
+
+
+####
+# Remove EC2 Instance, Clean Puppet, Clean LDAP, Clea Route53, Clean Zabbix
+
+def remove_east_ec2_instance(name, region='us-east-1'):
+    r=config.get_prod_east_conf()
+    authinfo = config.auth()
+    env.user = authinfo['user']
+    env.key_filename = authinfo['key_filename']
+    env.warn_only = True
+    with lcd(os.path.join(os.path.dirname(__file__),'.')):
+        instance = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-describe-instances --region %s --filter tag:Name=%s | grep INSTANCE | awk '{print $2}'" %(region,name), capture=True)
+        local('zabbix_api/remove_host.py %s' %(name))
+        local('/usr/bin/ldapdelete -x -w %s -D "cn=admin,dc=social,dc=local" -h %s cn=%s,ou=hosts,dc=social,dc=local' %(r.secret,r.ldap,name))
+        execute(puppet.puppetca_clean,name+'.social.local',host='10.201.2.10')
+        ip = local("host "+name+".asskickery.us | awk '{print $4}'", capture=True)
+        local('. ../conf/awsdeploy.bashrc; /usr/local/bin/route53 del_record Z4512UDZ56AKC '+name+'.asskickery.us. A '+ip)
+        local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-terminate-instances --region %s %s' %(region,instance))
+
+def remove_west_ec2_instance(name, region='us-west-1'):
+    r=config.get_devqa_west_conf()
+    authinfo = config.auth()
+    env.user = authinfo['user']
+    env.key_filename = authinfo['key_filename']
+    env.warn_only = True
+    with lcd(os.path.join(os.path.dirname(__file__),'.')):
+        instance = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-describe-instances --region %s --filter tag:Name=%s | grep INSTANCE | awk '{print $2}'" %(region,name), capture=True)
+        local('/usr/bin/ldapdelete -x -w %s -D "cn=admin,dc=manhattan,dc=dev" -h %s cn=%s,ou=hosts,dc=manhattan,dc=dev' %(r.secret,r.ldap,name))
+        execute(puppet.puppetca_clean,name+'.ecollegeqa.net',host='10.52.74.38')
+        ip = local("host "+name+".asskickery.us | awk '{print $4}'", capture=True)
+        local('. ../conf/awsdeploy.bashrc; /usr/local/bin/route53 del_record Z4512UDZ56AKC '+name+'.asskickery.us. A '+ip)
+        local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-terminate-instances --region %s %s' %(region,instance))
 
 
 def main():
