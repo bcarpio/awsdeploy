@@ -8,8 +8,9 @@ import os
 import sys
 import time
 import puppet
+import mongod
 
-###
+####
 # This Task Does The Following
 # * Checks LDAP For Existing Node
 # * Creates EC2 Instance
@@ -17,6 +18,7 @@ import puppet
 # * Tags The Node With The Host Name
 # * Updates LDAP With The Nodename And IP
 # * Adds The Node To Route 53
+####
 
 def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldap, secret, subnet, sgroup, domain, puppetmaster, admin):
     with settings(
@@ -81,30 +83,24 @@ def deploy_east_1d_private_6(name, size='m1.small', subnet='subnet-8d2632e5', zo
 # EC2 Storage Tasks
 ####
 
-def create_ebs_volume(size='50',zone='us-east-1a', region='east'):
+def create_ebs_volume(az,size='50',region='east'):
     if region == 'east':
         r=config.get_prod_east_conf()
     if region == 'west':
         r=config.get_devqa_west_conf
-    local('. ../conf/awsdeploy.bashrc; /usr/bin/ec2-create-volume --region %s --size %s --availability-zone %s | awk "{print $2}" > ../tmp/ebs_vol.out' %(r.region, size, zone))
+    if az == 'use1a':
+        zone = 'us-east-1a'
+    elif az == 'use1c':
+        zone = 'us-east-1c'
+    elif az == 'use1d':
+        zone = 'us-east-1d'
+    with lcd(os.path.join(os.path.dirname(__file__),'.')):
+        ebs_vol = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-create-volume --region %s --size %s --availability-zone %s | awk '{print $2}'" %(r.region, size, zone), capture=True)
+    return ebs_vol
 
-def create_ebs_volume_east_1a(zone='us-east-1a'):
-    create_ebs_volume, zone='%s' %(zone)
-
-def create_ebs_volume_east_1c(zone='us-east-1c'):
-    create_ebs_volume, zone='%s' %(zone)
-
-def create_ebs_volume_east_1d(zone='us-east-1d'):
-    create_ebs_volume, zone='%s' %(zone)
-
-def create_ebs_volume_west(zone='us-west-1a'):
-    create_ebs_volume, zone=zone, region='west'
-
-def attach_ebs_volume(device, region='us-east-1'):
-    volume = local("cat ../tmp/ebs_vol.out | awk '{print $2}'", capture=True)
-    instance = local('cat ../tmp/instance.out', capture=True)
-    local('. ../conf/awsdeploy.bashrc; /usr/bin/ec2-attach-volume %s --region %s -i %s -d %s' %(volume,region,instance,device))
-    local('rm ../tmp/ebs_vol.out')
+def attach_ebs_volume(device, ebs_vol, rid, region):
+    with lcd(os.path.join(os.path.dirname(__file__),'.')):
+        local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-attach-volume %s --region %s -i %s -d %s' %(ebs_vol,region,rid,device))
 
 ####
 # Elastic IP Tasks
@@ -231,13 +227,17 @@ def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='p
 
     if dmz == 'pri':
         if az == 'use1a':
-            deploy_east_1a_private_2(name=name,size=size)
+            ip_rid = deploy_east_1a_private_2(name=name,size=size)
+            return ip_rid
         if az == 'use1c':
-            deploy_east_1c_private_4(name=name,size=size)
+            ip_rid = deploy_east_1c_private_4(name=name,size=size)
+            return ip_rid
         if az == 'dev':
-            deploy_west_ec2_ami(name=name,size=size)
+            ip_rid = deploy_west_ec2_ami(name=name,size=size)
+            return ip_rid
         if az == 'qa':
-            deploy_west_ec2_ami(name=name,size=size)
+            ip_rid = deploy_west_ec2_ami(name=name,size=size)
+            return ip_rid
     elif dmz == 'pub':
         if az == 'use1a':
             ip_rid = deploy_east_1a_public_1(name=name,size=size)
@@ -282,7 +282,7 @@ def remove_east_ec2_instance(name, region='us-east-1'):
     env.key_filename = authinfo['key_filename']
     env.warn_only = True
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
-        instance = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-describe-instances --region %s --filter tag:Name=%s | grep INSTANCE | awk '{print $2}'" %(region,name), capture=True)
+        instance = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-describe-instances --region %s --filter tag:Name=%s | grep -v terminated | grep INSTANCE | awk '{print $2}'" %(region,name), capture=True)
         local('zabbix_api/remove_host.py %s' %(name))
         local('/usr/bin/ldapdelete -x -w %s -D "cn=admin,dc=social,dc=local" -h %s cn=%s,ou=hosts,dc=social,dc=local' %(r.secret,r.ldap,name))
         execute(puppet.puppetca_clean,name+'.social.local',host='10.201.2.10')
@@ -297,7 +297,7 @@ def remove_west_ec2_instance(name, region='us-west-1'):
     env.key_filename = authinfo['key_filename']
     env.warn_only = True
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
-        instance = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-describe-instances --region %s --filter tag:Name=%s | grep INSTANCE | awk '{print $2}'" %(region,name), capture=True)
+        instance = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-describe-instances --region %s --filter tag:Name=%s | grep -v terminated | grep INSTANCE | awk '{print $2}'" %(region,name), capture=True)
         local('/usr/bin/ldapdelete -x -w %s -D "cn=admin,dc=manhattan,dc=dev" -h %s cn=%s,ou=hosts,dc=manhattan,dc=dev' %(r.secret,r.ldap,name))
         execute(puppet.puppetca_clean,name+'.ecollegeqa.net',host='10.52.74.38')
         ip = local("host "+name+".asskickery.us | awk '{print $4}'", capture=True)
@@ -308,6 +308,7 @@ def remove_west_ec2_instance(name, region='us-west-1'):
 # File System Related tasks
 ####
 
+@task
 def setup_four_drive_mirror():
     env.warn_only = True
     sudo('puppetd --test')
@@ -375,6 +376,32 @@ def setup_gluster_lvm():
     sudo('mkdir -p /data/')
     sudo('mount -a')
 
+def deploy_four_node_mongodb_replica_set(shard='1', setname='mongo', size='m1.xlarge', app='pp'):
+    with settings(
+        hide('running', 'stdout')
+    ):
+        env.warn_only = True
+        local('rm ../tmp/ip.out')
+    env.warn_only = False
+    r=config.get_prod_east_conf()
+    shardnum = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=use1a-pri-%s-mongodb-s%s* | grep cn: | awk '{print $2}' | awk -F- '{print $5}'| tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,app,shard), capture=True)
+    if shardnum:
+        print (red("PROBLEM: Shard '%s' Already Exists")%(shard))
+        sys.exit(0)
+    iplist = []
+    for az in ['use1a', 'use1a', 'use1c', 'use1c', 'use1d']:
+        ip_rid = third_party_generic_deployment(appname=app+'-mongodb-s'+shard,puppetClass='mongodb',az=az,size=size,dmz='pri')
+        rid = ip_rid['rid']
+        ip = ip_rid['ip']
+        iplist.append(ip) 
+        time.sleep(120)
+        for lun in ['/dev/sdf', '/dev/sdg', '/dev/sdh', '/dev/sdi']:
+            ebs_vol = create_ebs_volume(az=az)
+            attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
+    time.sleep(300)
+    execute(setup_four_drive_mirror, hosts=ip_list)
+    execute(mongod.mongo_start, hosts=ip_list)
+    execute(mongod.create_mongo_cluster,host=ip_list[0],setname=setname,node1=ip_list[0],node2=ip_list[1],node3=ip_list[2],node4=ip_list[3],node5=ip_list[4])
 
 def main():
     print "This is a python module and should be run as such"

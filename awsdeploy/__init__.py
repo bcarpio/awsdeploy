@@ -56,3 +56,7 @@ def remove_instance(hostname):
         aws.remove_east_ec2_instance(name=hostname)
     if az in ('dev', 'qa'):
         aws.remove_west_ec2_instance(name=hostname)
+
+@task
+def deploy_mongodb_replica_set_pp(shard):
+    deploy_four_node_mongodb_replica_set(shard=shard, app='pp')
