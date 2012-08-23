@@ -36,6 +36,9 @@ def deploy_redis(az='dev'):
 def deploy_elasticsearch(az='dev'):
     aws.third_party_generic_deployment(appname='elasticsearch',puppetClass='elasticsearch',az=az,size='m1.small')
 
+####
+# Load Balancer Deployment
+####
 
 @task
 def deploy_priv_loadbalancers(appname,az='dev'):
@@ -45,9 +48,21 @@ def deploy_priv_loadbalancers(appname,az='dev'):
 @task
 def deploy_pub_loadbalancers(appname,az):
     allocid = aws.allocate_elastic_ip()
-    rid = aws.third_party_generic_deployment(appname='haproxy-'+appname,puppetClass=('haproxy','stunnel'),az=az,size='m1.small',dmz='pub')
+    ip_rid = aws.third_party_generic_deployment(appname='haproxy-'+appname,puppetClass=('haproxy','stunnel'),az=az,size='m1.small',dmz='pub')
+    rid = ip_rid['rid']
     time.sleep(30)
     aws.associate_elastic_ip(elasticip=allocid,instance=rid)
+
+####
+# Mongodb Deployment
+####
+
+@task
+def deploy_mongodb_replica_set_pp(shard):
+    deploy_four_node_mongodb_replica_set(shard=shard, app='sl')
+####
+# Remove An Instance
+####
 
 @task
 def remove_instance(hostname):
@@ -57,6 +72,3 @@ def remove_instance(hostname):
     if az in ('dev', 'qa'):
         aws.remove_west_ec2_instance(name=hostname)
 
-@task
-def deploy_mongodb_replica_set_pp(shard):
-    deploy_four_node_mongodb_replica_set(shard=shard, app='pp')

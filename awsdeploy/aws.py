@@ -144,6 +144,9 @@ def ldap_modify(hostname,puppetClass,az):
 def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', size='m1.small'):
     cleanup()
     r=config.get_conf(az)
+    authinfo = config.auth()
+    env.user = authinfo['user']
+    env.key_filename = authinfo['key_filename']
     if os.path.exists('../tmp/ip.out'):
         local('rm ../tmp/ip.out')
     count = int(count)
@@ -192,9 +195,6 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
 
         status = 1
         runs = 0
-        authinfo = config.auth()
-        env.user = authinfo['user']
-        env.key_filename = authinfo['key_filename']
         while status != 0:
             if runs > 60:
                 print (red("PROBLEM: Deployment Failed"))
@@ -216,6 +216,9 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
 def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='pri'):
     cleanup()
     r=config.get_conf(az)
+    authinfo = config.auth()
+    env.user = authinfo['user']
+    env.key_filename = authinfo['key_filename']
     last = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=%s-%s-%s-* | grep cn: | tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,az,dmz,appname), capture=True)
     if last:
         num = last[-2:]
@@ -228,25 +231,19 @@ def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='p
     if dmz == 'pri':
         if az == 'use1a':
             ip_rid = deploy_east_1a_private_2(name=name,size=size)
-            return ip_rid
         if az == 'use1c':
             ip_rid = deploy_east_1c_private_4(name=name,size=size)
-            return ip_rid
+        if az == 'use1d':
+            ip_rid = deploy_east_1d_private_6(name=name,size=size)
         if az == 'dev':
             ip_rid = deploy_west_ec2_ami(name=name,size=size)
-            return ip_rid
         if az == 'qa':
             ip_rid = deploy_west_ec2_ami(name=name,size=size)
-            return ip_rid
     elif dmz == 'pub':
         if az == 'use1a':
             ip_rid = deploy_east_1a_public_1(name=name,size=size)
-            rid = ip_rid['rid']
-            return rid
         if az == 'use1c':
             ip_rid = deploy_east_1c_public_3(name=name,size=size)
-            rid = ip_rid['rid']
-            return rid
     else:
         print "ERROR: Wrong dmz specified"
 
@@ -256,6 +253,7 @@ def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='p
         for pclass in puppetClass:
             ldap_modify(hostname=name, puppetClass=pclass, az=az)
     cleanup() 
+    return ip_rid
 
 ###
 # This cleans up after instance creation
@@ -399,9 +397,11 @@ def deploy_four_node_mongodb_replica_set(shard='1', setname='mongo', size='m1.xl
             ebs_vol = create_ebs_volume(az=az)
             attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
     time.sleep(300)
-    execute(setup_four_drive_mirror, hosts=ip_list)
-    execute(mongod.mongo_start, hosts=ip_list)
-    execute(mongod.create_mongo_cluster,host=ip_list[0],setname=setname,node1=ip_list[0],node2=ip_list[1],node3=ip_list[2],node4=ip_list[3],node5=ip_list[4])
+    env.parallel = True
+    execute(setup_four_drive_mirror, hosts=iplist)
+    execute(mongod.start, hosts=iplist)
+    time.sleep(60)
+    execute(mongod.create_five_node_mongo_cluster,host=iplist[0],setname=setname,node1=iplist[0],node2=iplist[1],node3=iplist[2],node4=iplist[3],node5=iplist[4])
 
 def main():
     print "This is a python module and should be run as such"
