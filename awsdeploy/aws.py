@@ -374,7 +374,7 @@ def setup_gluster_lvm():
     sudo('mkdir -p /data/')
     sudo('mount -a')
 
-def deploy_four_node_mongodb_replica_set(shard='1', setname='mongo', size='m1.xlarge', app='pp'):
+def deploy_five_node_mongodb_replica_set(shard='1', setname='mongo', size='m1.xlarge', app='pp'):
     with settings(
         hide('running', 'stdout')
     ):
