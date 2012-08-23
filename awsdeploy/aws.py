@@ -334,7 +334,7 @@ def setup_two_drive_mirror():
     sudo('puppetd --test')
     env.warn_only = True
     sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
-    sudo('mdadm --create --force --assume-clean -R /dev/md0 -l10 --chunk=256 --raid-devices=4 /dev/xvdf /dev/xvdg /dev/xvdh /dev/xvdi')
+    sudo('mdadm --create --force --assume-clean -R /dev/md0 -l10 --chunk=256 --raid-devices=4 /dev/xvdf /dev/xvdg')
     sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
     sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
     sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
@@ -379,7 +379,6 @@ def deploy_five_node_mongodb_replica_set(shard='1', setname='mongo', size='m1.xl
         hide('running', 'stdout')
     ):
         env.warn_only = True
-        local('rm ../tmp/ip.out')
     env.warn_only = False
     r=config.get_prod_east_conf()
     shardnum = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=use1a-pri-%s-mongodb-s%s* | grep cn: | awk '{print $2}' | awk -F- '{print $5}'| tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,app,shard), capture=True)
@@ -399,9 +398,41 @@ def deploy_five_node_mongodb_replica_set(shard='1', setname='mongo', size='m1.xl
     time.sleep(300)
     env.parallel = True
     execute(setup_four_drive_mirror, hosts=iplist)
+    execute(setup_mongodb_lvm, hosts=iplist)
     execute(mongod.start, hosts=iplist)
-    time.sleep(60)
+    time.sleep(120)
     execute(mongod.create_five_node_mongo_cluster,host=iplist[0],setname=setname,node1=iplist[0],node2=iplist[1],node3=iplist[2],node4=iplist[3],node5=iplist[4])
+
+def deploy_three_node_mongodb_replica_set(shard='1', setname='mongo', size='m1.medium', app='inf'):
+    with settings(
+        hide('running', 'stdout')
+    ):
+        env.warn_only = True
+    env.warn_only = False
+    r=config.get_prod_east_conf()
+    shardnum = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=use1a-pri-%s-mongodb-s%s* | grep cn: | awk '{print $2}' | awk -F- '{print $5}'| tail -1" %(r.secret,r.admin,r.basedn,r
+.basedn,r.ldap,app,shard), capture=True)
+    if shardnum:
+        print (red("PROBLEM: Shard '%s' Already Exists")%(shard))
+        sys.exit(0)
+    iplist = []
+    for az in ['use1a', 'use1c', 'use1d']:
+        ip_rid = third_party_generic_deployment(appname=app+'-mongodb-s'+shard,puppetClass='mongodb',az=az,size=size,dmz='pri')
+        rid = ip_rid['rid']
+        ip = ip_rid['ip']
+        iplist.append(ip)
+        time.sleep(120)
+        for lun in ['/dev/sdf', '/dev/sdg']:
+            ebs_vol = create_ebs_volume(az=az)
+            attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
+    time.sleep(300)
+    env.parallel = True
+    execute(setup_two_drive_mirror, hosts=iplist)
+    execute(setup_mongodb_lvm, hosts=iplist)
+    execute(mongod.start, hosts=iplist)
+    time.sleep(120)
+    execute(mongod.create_three_node_mongo_cluster,host=iplist[0],setname=setname,node1=iplist[0],node2=iplist[1],node3=iplist[2])
+
 
 def main():
     print "This is a python module and should be run as such"
