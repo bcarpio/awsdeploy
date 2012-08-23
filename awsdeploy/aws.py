@@ -374,20 +374,15 @@ def setup_gluster_lvm():
     sudo('mkdir -p /data/')
     sudo('mount -a')
 
-def deploy_five_node_mongodb_replica_set(shard='1', setname='mongo', size='m1.xlarge', app='pp'):
-    with settings(
-        hide('running', 'stdout')
-    ):
-        env.warn_only = True
-    env.warn_only = False
+####
+# Generic Deploy 5 Nodes with 4 Raid 0 EBS Volumes
+####
+
+def deploy_five_nodes_with_4_ebs_volumes_raid_0(appname,puppetClass,size='m1.xlarge'):
     r=config.get_prod_east_conf()
-    shardnum = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=use1a-pri-%s-mongodb-s%s* | grep cn: | awk '{print $2}' | awk -F- '{print $5}'| tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,app,shard), capture=True)
-    if shardnum:
-        print (red("PROBLEM: Shard '%s' Already Exists")%(shard))
-        sys.exit(0)
     iplist = []
     for az in ['use1a', 'use1a', 'use1c', 'use1c', 'use1d']:
-        ip_rid = third_party_generic_deployment(appname=app+'-mongodb-s'+shard,puppetClass='mongodb',az=az,size=size,dmz='pri')
+        ip_rid = third_party_generic_deployment(appname=appname,puppetClass=puppetClass,az=az,size=size,dmz='pri')
         rid = ip_rid['rid']
         ip = ip_rid['ip']
         iplist.append(ip) 
@@ -398,26 +393,13 @@ def deploy_five_node_mongodb_replica_set(shard='1', setname='mongo', size='m1.xl
     time.sleep(300)
     env.parallel = True
     execute(setup_four_drive_mirror, hosts=iplist)
-    execute(setup_mongodb_lvm, hosts=iplist)
-    execute(mongod.start, hosts=iplist)
-    time.sleep(120)
-    execute(mongod.create_five_node_mongo_cluster,host=iplist[0],setname=setname,node1=iplist[0],node2=iplist[1],node3=iplist[2],node4=iplist[3],node5=iplist[4])
+    return iplist
 
-def deploy_three_node_mongodb_replica_set(shard='1', setname='mongo', size='m1.medium', app='inf'):
-    with settings(
-        hide('running', 'stdout')
-    ):
-        env.warn_only = True
-    env.warn_only = False
+def deploy_three_nodes_with_2_ebs_volumes_raid_0(appname,puppetClass,size='m1.medium'):
     r=config.get_prod_east_conf()
-    shardnum = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=use1a-pri-%s-mongodb-s%s* | grep cn: | awk '{print $2}' | awk -F- '{print $5}'| tail -1" %(r.secret,r.admin,r.basedn,r
-.basedn,r.ldap,app,shard), capture=True)
-    if shardnum:
-        print (red("PROBLEM: Shard '%s' Already Exists")%(shard))
-        sys.exit(0)
     iplist = []
     for az in ['use1a', 'use1c', 'use1d']:
-        ip_rid = third_party_generic_deployment(appname=app+'-mongodb-s'+shard,puppetClass='mongodb',az=az,size=size,dmz='pri')
+        ip_rid = third_party_generic_deployment(appname=appname,puppetClass=puppetClass,az=az,size=size,dmz='pri')
         rid = ip_rid['rid']
         ip = ip_rid['ip']
         iplist.append(ip)
@@ -428,10 +410,49 @@ def deploy_three_node_mongodb_replica_set(shard='1', setname='mongo', size='m1.m
     time.sleep(300)
     env.parallel = True
     execute(setup_two_drive_mirror, hosts=iplist)
+    return iplist
+
+####
+# Mongo Related Tasks
+####
+
+def deploy_five_node_mongodb_replica_set(shard='1', setname='mongo', app='sl'):
+    env.warn_only = False
+    r=config.get_prod_east_conf()
+    shardnum = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=use1a-pri-%s-mongodb-s%s* | grep cn: | awk '{print $2}' | awk -F- '{print $5}'| tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,app,shard), capture=True)
+    if shardnum:
+        print (red("PROBLEM: Shard '%s' Already Exists")%(shard))
+        sys.exit(0)
+    appname = app+'-mongodb-s'+shard
+    iplist = deploy_five_nodes_with_4_ebs_volumes_raid_0(appname=appname,puppetClass='mongodb')
+    execute(setup_mongodb_lvm, hosts=iplist)
+    execute(mongod.start, hosts=iplist)
+    time.sleep(120)
+    execute(mongod.create_five_node_mongo_cluster,host=iplist[0],setname=setname,node1=iplist[0],node2=iplist[1],node3=iplist[2],node4=iplist[3],node5=iplist[4])
+
+def deploy_three_node_mongodb_replica_set(shard='1', setname='mongo', app='inf'):
+    env.warn_only = False
+    r=config.get_prod_east_conf()
+    shardnum = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=use1a-pri-%s-mongodb-s%s* | grep cn: | awk '{print $2}' | awk -F- '{print $5}'| tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,app,shard), capture=True)
+    if shardnum:
+        print (red("PROBLEM: Shard '%s' Already Exists")%(shard))
+        sys.exit(0)
+    appname = app+'-mongodb-s'+shard
+    iplist = deploy_three_nodes_with_2_ebs_volumes_raid_0(appname=appname,puppetClass='mongodb')
     execute(setup_mongodb_lvm, hosts=iplist)
     execute(mongod.start, hosts=iplist)
     time.sleep(120)
     execute(mongod.create_three_node_mongo_cluster,host=iplist[0],setname=setname,node1=iplist[0],node2=iplist[1],node3=iplist[2])
+
+####
+# Gluster Related Tasks
+####
+
+def deploy_five_node_gluster_cluster(app):
+    env.warn_only = False
+    appname = app+'-gluster'
+    iplist = deploy_five_nodes_with_4_ebs_volumes_raid_0(appname=appname,puppetClass='gluster')
+    execute(setup_gluster_lvm, hosts=iplist)
 
 
 def main():
