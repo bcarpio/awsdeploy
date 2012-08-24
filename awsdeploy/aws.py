@@ -25,8 +25,7 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldap, secret, subnet, 
         hide('running', 'stdout')
     ):
         if "." in name:
-            print (red("PROBLEM: Hostnames can not contain versions, periods must be replaced with 'x'"))
-            sys.exit(1)
+            name = name.replace('.','x')
         a = local("/usr/bin/ldapsearch -l 120 -x -w %s -D '%s' -b '%s' -h %s  -LLL 'cn=%s'" %(secret,admin+basedn,basedn,ldap,name), capture=True)
         if a:
             print (red("PROBLEM: Node '%s' Already In LDAP")%(name))
