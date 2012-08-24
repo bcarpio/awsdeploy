@@ -8,3 +8,5 @@ Please start using this to deploy new EC2 instances to asskickery. If new featur
 
 * Brian Carpio
 * brianc@ecollege.com
+
+# Version 1.0 #
