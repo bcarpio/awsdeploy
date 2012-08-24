@@ -25,7 +25,7 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldap, secret, subnet, 
         hide('running', 'stdout')
     ):
         if "." in name:
-            name = name.replace('.','x')
+            print (red("PROBLEM: Do Not Use Periods In Names"))
         a = local("/usr/bin/ldapsearch -l 120 -x -w %s -D '%s' -b '%s' -h %s  -LLL 'cn=%s'" %(secret,admin+basedn,basedn,ldap,name), capture=True)
         if a:
             print (red("PROBLEM: Node '%s' Already In LDAP")%(name))
@@ -149,6 +149,7 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
     authinfo = config.auth()
     env.user = authinfo['user']
     env.key_filename = authinfo['key_filename']
+    version = version.replace('.','x')
     if os.path.exists('../tmp/ip.out'):
         local('rm ../tmp/ip.out')
     count = int(count)
