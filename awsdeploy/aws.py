@@ -39,6 +39,7 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldap, secret, subnet, 
                 ip = local("cat ../tmp/ec2-run-instances.out | grep INSTANCE | awk '{print $12}'", capture=True)
             rid = local("cat ../tmp/ec2-run-instances.out | grep INSTANCE | awk '{print $2}'", capture=True)
             local('cat ../templates/template.ldif | sed -e s/HOST/\'%s\'/g -e s/IP/\'%s\'/g -e s/BASEDN/%s/g | ldapadd -x -w %s -D "%s" -h %s' %(name,ip,basedn,secret,admin+basedn,ldap))
+            execute(add_node_to_mongodb_enc, hostname=name, host=r.puppetmaster)
             local('. ../conf/awsdeploy.bashrc; /usr/local/bin/route53 add_record Z4512UDZ56AKC '+name+'.asskickery.us A '+ip)
             local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-create-tags %s --region %s --tag Name=%s' %(rid,region,name))
             local('rm ../tmp/user-data.sh')
@@ -139,6 +140,17 @@ def ldap_modify(hostname,puppetClass,az):
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
         local("sed -e s/HOST/%s/g -e s/PUPPETCLASS/%s/g -e s/BASEDN/%s/g ../templates/modify.ldif | /usr/bin/ldapmodify -v -x -w %s -D %s%s -h %s" %(hostname,puppetClass,r.basedn,r.secret,r.admin,r.basedn,r.ldap))
 
+###
+# This Updates Mongodb With The Right Puppet Classes
+###
+def add_puppetClasses_to_mongodb_enc(hostname,puppetClass):
+    sudo('/opt/mongodb-enc/scripts/add_node.py -a append -n %s -c %s' %(hostname,puppetClass)
+
+###
+# This adds the node to mongodb enc
+###
+def add_node_to_mongodb_enc(hostname)
+    sudo('/opt/mongodb-enc/scripts/add_node.py -a new -n %s' %(hostname)
 
 ### 
 # This the generic application deployment task
@@ -185,9 +197,11 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
         for host in hostnamelist:
                 if isinstance(puppetClass, basestring):
                     ldap_modify(hostname=host, puppetClass=puppetClass, az=az)
+                    add_puppetClasses_to_mongodb_enc(hostname=host,puppetClass=puppetClass,host=r.puppetmaster)
                 else:
                     for pclass in puppetClass:
                         ldap_modify(hostname=host, puppetClass=pclass, az=az)
+                        add_puppetClasses_to_mongodb_enc(hostname=host,puppetClass=puppetClass,host=r.puppetmaster)
 
         time.sleep(60)
 
