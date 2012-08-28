@@ -11,6 +11,12 @@ import puppet
 import mongod
 
 ####
+# Define Some Global Values
+####
+env.skip_bad_hosts = True
+env.connection_attempts = 10
+
+####
 # This Task Does The Following
 # * Checks LDAP For Existing Node
 # * Creates EC2 Instance
@@ -189,7 +195,7 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
                     for pclass in puppetClass:
                         ldap_modify(hostname=host, puppetClass=pclass, az=az)
 
-        time.sleep(60)
+        time.sleep(120)
 
         if len(iplist) == 1:
             env.parallel = False
