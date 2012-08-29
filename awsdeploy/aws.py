@@ -150,13 +150,13 @@ def ldap_modify(hostname,puppetClass,az):
 # This Updates Mongodb With The Right Puppet Classes
 ###
 def add_puppetClasses_to_mongodb_enc(hostname,puppetClass):
-    sudo('/opt/mongodb-enc/scripts/add_node.py -a append -n %s -c %s' %(hostname,puppetClass)
+    sudo('/opt/mongodb-enc/scripts/add_node.py -a append -n %s -c %s' %(hostname,puppetClass))
 
 ###
 # This adds the node to mongodb enc
 ###
-def add_node_to_mongodb_enc(hostname)
-    sudo('/opt/mongodb-enc/scripts/add_node.py -a new -n %s' %(hostname)
+def add_node_to_mongodb_enc(hostname):
+    sudo('/opt/mongodb-enc/scripts/add_node.py -a new -n %s' %(hostname))
 
 ### 
 # This the generic application deployment task
