@@ -58,20 +58,20 @@ def deploy_pub_loadbalancers(appname,az):
 ####
 
 @task
-def deploy_mongodb_replica_set_sl(shard):
-    deploy_five_node_mongodb_replica_set(shard=shard, app='sl')
+def deploy_mongodb_replica_set_sl(az,shard):
+    deploy_five_node_mongodb_replica_set(az,shard=shard,app='sl')
 
 @task
-def deploy_mongodb_replica_set_inf(shard):
-    deploy_three_node_mongodb_replica_set(shard=shard, app='inf')
+def deploy_mongodb_replica_set_inf(az,shard):
+    deploy_three_node_mongodb_replica_set(az,shard=shard,app='inf')
 
 ###
 # Gluster Deployment
 ###
 
 @task
-def deploy_gluster(app):
-    deploy_five_node_gluster_cluster(app=app)
+def deploy_gluster(az,app):
+    deploy_five_node_gluster_cluster(az,app=app)
 
     
 ####
@@ -81,8 +81,8 @@ def deploy_gluster(app):
 @task
 def remove_instance(hostname):
     az = hostname.split('-', 1)[0]
-    if az in ('use1a', 'use1c', 'use1d'):
-        aws.remove_east_ec2_instance(name=hostname)
+    if az in ('use1a', 'use1c', 'use1d', 'usw2a', 'usw2b', 'usw2c'):
+        aws.remove_prod_pqa_ec2_instance(name=hostname,az=az)
     if az in ('dev', 'qa'):
         aws.remove_west_ec2_instance(name=hostname)
 
