@@ -549,7 +549,7 @@ def deploy_five_node_mongodb_replica_set(az, shard='1', setname='mongo', app='sl
     iplist = deploy_five_nodes_with_4_ebs_volumes_raid_0(az=az,appname=appname,puppetClass='mongodb')
     execute(setup_mongodb_lvm, hosts=iplist)
     execute(mongod.start, hosts=iplist)
-    time.sleep(120)
+    time.sleep(180)
     execute(mongod.create_five_node_mongo_cluster,host=iplist[0],setname=setname,node1=iplist[0],node2=iplist[1],node3=iplist[2],node4=iplist[3],node5=iplist[4])
 
 def deploy_three_node_mongodb_replica_set(az, shard='1', setname='mongo', app='inf'):
@@ -563,7 +563,7 @@ def deploy_three_node_mongodb_replica_set(az, shard='1', setname='mongo', app='i
     iplist = deploy_three_nodes_with_2_ebs_volumes_raid_0(az=az,appname=appname,puppetClass='mongodb')
     execute(setup_mongodb_lvm, hosts=iplist)
     execute(mongod.start, hosts=iplist)
-    time.sleep(120)
+    time.sleep(180)
     execute(mongod.create_three_node_mongo_cluster,host=iplist[0],setname=setname,node1=iplist[0],node2=iplist[1],node3=iplist[2])
 
 ####
