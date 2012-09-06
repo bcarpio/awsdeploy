@@ -29,6 +29,22 @@ def deploy_redis(az='dev'):
 
 
 ####
+# Java Server Deployment
+####
+
+@task
+def deploy_java_server(appname,az='dev',count='1',size='m1.medium'):
+    aws.app_deploy_generic(version='0x1x0',appname=appname,puppetClass=('java','nodejs'),az=az,count=count,size=size)
+
+####
+# NodeJs Server Deployment
+####
+
+@task
+def deploy_node_server(appname,az='dev',count='1',size='m1.medium'):
+    aws.app_deploy_generic(version='0x1x0',appname=appname,puppetClass='nodejs',az=az,count=count,size=size)
+
+####
 #  Elastic Search Deployment
 ####
 

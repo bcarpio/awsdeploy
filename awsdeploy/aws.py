@@ -149,7 +149,7 @@ def deploy_west_2c_private_6(name, size='m1.small', subnet=' subnet-f85def91', z
 # EC2 Storage Tasks
 ####
 
-def create_ebs_volume(az,size='50'):
+def create_ebs_volume(az,size='50',iops='no'):
     r=config.get_conf(az)
     if az == 'use1a':
         zone = 'us-east-1a'
@@ -164,7 +164,10 @@ def create_ebs_volume(az,size='50'):
     elif az == 'usw2c':
         zone = 'us-west-2c'
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
-        ebs_vol = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-create-volume --region %s --size %s --availability-zone %s | awk '{print $2}'" %(r.region, size, zone), capture=True)
+        if iops == 'no':
+            ebs_vol = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-create-volume --region %s --size %s --availability-zone %s | awk '{print $2}'" %(r.region, size, zone), capture=True)
+        elif iops == 'yes':
+            ebs_vol = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-create-volume --region %s --size %s --availability-zone %s --type io1 --iops 1000 | awk '{print $2}'" %(r.region, size, zone), capture=True)
     return ebs_vol
 
 def attach_ebs_volume(device, ebs_vol, rid, region):
