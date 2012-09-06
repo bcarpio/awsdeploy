@@ -223,7 +223,6 @@ def add_node_to_mongodb_enc(hostname):
 # This the generic application deployment task
 ###
 def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', size='m1.small'):
-    cleanup()
     r=config.get_conf(az)
     authinfo = config.auth()
     env.user = authinfo['user']
