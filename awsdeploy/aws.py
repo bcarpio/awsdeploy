@@ -541,7 +541,7 @@ def deploy_three_nodes_with_2_ebs_volumes_raid_0(az,appname,puppetClass,size='m1
 def deploy_five_node_mongodb_replica_set(az, shard='1', setname='mongo', app='sl'):
     env.warn_only = False
     r=config.get_conf(az)
-    shardnum = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=use1a-pri-%s-mongodb-s%s* | grep cn: | awk '{print $2}' | awk -F- '{print $5}'| tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,app,shard), capture=True)
+    shardnum = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=%s-pri-%s-mongodb-s%s* | grep cn: | awk '{print $2}' | awk -F- '{print $5}'| tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,az,app,shard), capture=True)
     if shardnum:
         print (red("PROBLEM: Shard '%s' Already Exists")%(shard))
         sys.exit(0)
