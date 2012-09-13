@@ -409,6 +409,35 @@ def remove_west_ec2_instance(name, region='us-west-1'):
 ####
 
 @task
+def setup_ten_drive_mirror():
+    env.warn_only = True
+    sudo('puppetd --test')
+    env.warn_only = True
+    sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
+    sudo('mdadm --create --force --assume-clean -R /dev/md0 -l0 --chunk=256 --raid-devices=10 /dev/xvdf /dev/xvdg /dev/xvdh /dev/xvdi /dev/xvdj /dev/xvdk /dev/xvdl /dev/xvdm /dev/xvdn /dev/xvdo')
+    sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
+    sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
+    sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
+    env.warn_only = False
+    sudo('mdadm --create --force --assume-clean -R /dev/md0 -l0 --chunk=256 --raid-devices=10 /dev/xvdf /dev/xvdg /dev/xvdh /dev/xvdi /dev/xvdj /dev/xvdk /dev/xvdl /dev/xvdm /dev/xvdn /dev/xvdo')
+    sudo('echo "`mdadm --detail --scan`" | tee -a /etc/mdadm.conf')
+    sudo('blockdev --setra 128 /dev/md0')
+    sudo('blockdev --setra 128 /dev/xvdf')
+    sudo('blockdev --setra 128 /dev/xvdg')
+    sudo('blockdev --setra 128 /dev/xvdh')
+    sudo('blockdev --setra 128 /dev/xvdi')
+    sudo('blockdev --setra 128 /dev/xvdj')
+    sudo('blockdev --setra 128 /dev/xvdk')
+    sudo('blockdev --setra 128 /dev/xvdl')
+    sudo('blockdev --setra 128 /dev/xvdm')
+    sudo('blockdev --setra 128 /dev/xvdn')
+    sudo('blockdev --setra 128 /dev/xvdo')
+    sudo('dd if=/dev/urandom of=/etc/data.key bs=1 count=32')
+    time.sleep(5)
+    sudo('cat /etc/data.key | cryptsetup luksFormat /dev/md0')
+    sudo('cat /etc/data.key | cryptsetup luksOpen /dev/md0 data')
+
+@task
 def setup_four_drive_mirror():
     env.warn_only = True
     sudo('puppetd --test')
@@ -476,9 +505,37 @@ def setup_gluster_lvm():
     sudo('mkdir -p /data/')
     sudo('mount -a')
 
+def setup_rabbit_lvm():
+    sudo('pvcreate /dev/mapper/data')
+    sudo('vgcreate datavg /dev/mapper/data')
+    sudo('lvcreate -l 100%vg -n datalv datavg')
+    sudo('mke2fs -t ext4 -F /dev/datavg/datalv')
+    sudo('echo "/dev/datavg/datalv  /data   ext4    defaults,auto,noatime,noexec    0       0" | tee -a /etc/fstab')
+    sudo('mkdir -p /data/')
+    sudo('mount -a')
+    sudo('chown -R rabbitmq:rabbitmq /data/')
+    sudo('service rabbitmq-server stop')
+    sudo('rm -rf /var/lib/rabbitmq/')
+    sudo('ln -s ln -s /data/ /var/lib/rabbitmq')
+    sudo('service rabbitmq-server start')
+
 ####
 # Generic Deploy 5 Nodes with 4 Raid 0 EBS Volumes
 ####
+
+def deploy_one_node_with_10_ebs_io_volumes_raid_0(az,appname,puppetClass,iops='yes',capacity='100',size='m1.xlarge'):
+    r=config.get_conf(az)
+    ip_rid = third_party_generic_deployment(appname=appname,puppetClass=puppetClass,az=az,size=size,dmz='pri')
+    rid = ip_rid['rid']
+    ip = ip_rid['ip']
+    time.sleep(120)
+    for lun in ['/dev/sdf', '/dev/sdg', '/dev/sdh', '/dev/sdi', '/dev/sdj', '/dev/sdk', '/dev/sdl', '/dev/sdm', '/dev/sdn', '/dev/sdo']:
+        ebs_vol = create_ebs_volume(az=az,iops=iops,size=capacity)
+        attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
+    time.sleep(300)
+    env.parallel = True
+    execute(setup_ten_drive_mirror, host=ip)
+    return ip
 
 def deploy_five_nodes_with_4_ebs_volumes_raid_0(az,appname,puppetClass,size='m1.xlarge'):
     r=config.get_conf(az)
@@ -508,7 +565,7 @@ def deploy_five_nodes_with_4_ebs_volumes_raid_0(az,appname,puppetClass,size='m1.
     execute(setup_four_drive_mirror, hosts=iplist)
     return iplist
 
-def deploy_three_nodes_with_2_ebs_volumes_raid_0(az,appname,puppetClass,size='m1.medium'):
+def deploy_three_nodes_with_2_ebs_volumes_raid_0(az,appname,puppetClass,iops='no',capacity='50',size='m1.medium'):
     r=config.get_conf(az)
     iplist = []
     if az in ['use1a', 'use1c', 'use1d']:
@@ -519,7 +576,7 @@ def deploy_three_nodes_with_2_ebs_volumes_raid_0(az,appname,puppetClass,size='m1
             iplist.append(ip)
             time.sleep(120)
             for lun in ['/dev/sdf', '/dev/sdg']:
-                ebs_vol = create_ebs_volume(az=azloop)
+                ebs_vol = create_ebs_volume(az=azloop,iops=iops,size=capacity)
                 attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
     if az in ['usw2a', 'usw2b', 'usw2c']:
         for azloop in ['usw2a', 'usw2b', 'usw2c']:
@@ -529,7 +586,7 @@ def deploy_three_nodes_with_2_ebs_volumes_raid_0(az,appname,puppetClass,size='m1
             iplist.append(ip)
             time.sleep(120)
             for lun in ['/dev/sdf', '/dev/sdg', '/dev/sdh', '/dev/sdi']:
-                ebs_vol = create_ebs_volume(az=azloop)
+                ebs_vol = create_ebs_volume(az=azloop,iops=iops,size=capacity)
                 attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
     time.sleep(300)
     env.parallel = True

@@ -53,6 +53,24 @@ def deploy_elasticsearch(az='dev'):
     aws.third_party_generic_deployment(appname='elasticsearch',puppetClass='elasticsearch',az=az,size='m1.small')
 
 ####
+# Rabbit MQ Deployment
+####
+
+@task
+def deploy_rabbitmq(az='dev'):
+    ip = aws.deploy_one_node_with_10_ebs_io_volumes_raid_0(appname='rabbitmq',puppetClass=('rabbitmq','stdlib'),az=az,size='m1.xlarge')
+    execute(aws.setup_rabbit_lvm,hosts=ip)
+
+####
+# Cassandra Deployment
+####
+
+@task
+def deploy_cassandra(az='dev'):
+    iplist = deploy_three_nodes_with_2_ebs_volumes_raid_0(az=az,appname='cassandra',puppetClass='cassandra',iops='yes',capacity='100',size='m1.xlarge')
+    execute(aws.setup_gluster_lvm,hosts=iplist)
+
+####
 # Load Balancer Deployment
 ####
 
