@@ -10,7 +10,10 @@ import time
 import puppet
 import mongod
 import ldap
+import ldap.modlist as modlist
+import boto
 from boto.ec2 import *
+from boto.route53.record import ResourceRecordSets
 
 ####
 # Define Some Global Values
@@ -59,15 +62,16 @@ def new_deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, 
     creds = config.get_ec2_conf()
     if "." in name:
         print (red("PROBLEM: Do Not Use Periods In Names"))
-    somevar = ldap.initialize('ldap://'+ldaphost)
-    ck_node = somevar.search_s(basedn,ldap.SCOPE_SUBTREE, '(cn='+name+')',['cn'])
+    ldapinit = ldap.initialize('ldap://'+ldaphost)
+    ldapinit.simple_bind_s(admin+basedn,secret)
+    ck_node = ldapinit.search_s(basedn,ldap.SCOPE_SUBTREE, '(cn='+name+')',['cn'])
     if ck_node:
         print (red("PROBLEM: Node "+name+" Already In LDAP"))
         sys.exit(1)
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
         user_data = local('cat ../templates/user-data.template | sed -e s/HOSTNAME/%s/g -e s/DOMAIN/%s/g -e s/PUPPETMASTER/%s/g' %(name,domain,puppetmaster))
-    conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
-    instance_info = conn.run_instances(
+    ec2conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
+    instance_info = ec2conn.run_instances(
         image_id=ami,
         key_name=creds['EC2_KEYPAIR'],
         instance_type=size,
@@ -80,9 +84,24 @@ def new_deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, 
     )
     rid = instance_info.instances[0].id
     ip = instance_info.instances[0].private_ip_address
-    print {'ip': ip, 'rid' : rid}
+    dn='cn='+name+',ou=hosts,'+basedn
+    attrs = {}
+    attrs['cn'] = name
+    attrs['objectclass'] = ['top','device','ipHost', 'puppetClient']
+    attrs['environment'] = 'production'
+    attrs['ipHostNumber'] = str(ip)
+    attrs['parentnode'] = 'default'
+    ldif = modlist.addModlist(attrs)
+    ldapinit.add_s(dn,ldif)
+    ldapinit.unbind_s()
+    route53conn = boto.connect_route53(creds['AWS_ACCESS_KEY_ID'],creds['AWS_SECRET_ACCESS_KEY'])
+    changes = ResourceRecordSets(route53conn, hosted_zone_id='Z4512UDZ56AKC')
+    change = changes.add_change("CREATE", name+".asskickery.us", type="A", ttl="600")
+    change.add_value(ip)
+    changes.commit()
+    ec2conn.create_tags([rid], {'Name': name})
+    print (blue("SUCCESS: Node '%s' Deployed To %s")%(name,region))
     return {'ip': ip, 'rid' : rid}
-
 
 ###
 # These Are The Subnet Specific Tasks For Each AZ In EC2
