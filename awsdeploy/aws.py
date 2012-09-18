@@ -31,45 +31,13 @@ env.connection_attempts = 10
 # * Adds The Node To Route 53
 ####
 
-def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldap, secret, subnet, sgroup, domain, puppetmaster, admin):
-    with settings(
-        hide('running', 'stdout')
-    ):
-        if "." in name:
-            print (red("PROBLEM: Do Not Use Periods In Names"))
-        a = local("/usr/bin/ldapsearch -l 120 -x -w %s -D '%s' -b '%s' -h %s  -LLL 'cn=%s'" %(secret,admin+basedn,basedn,ldap,name), capture=True)
-        if a:
-            print (red("PROBLEM: Node '%s' Already In LDAP")%(name))
-            sys.exit(1)
-        with lcd(os.path.join(os.path.dirname(__file__),'.')):
-            local('cat ../templates/user-data.template | sed -e s/HOSTNAME/%s/g -e s/DOMAIN/%s/g -e s/PUPPETMASTER/%s/g > ../tmp/user-data.sh' %(name,domain,puppetmaster))
-            local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-run-instances --instance-initiated-shutdown-behavior stop %s --instance-type %s --availability-zone %s --region %s --key ${EC2_KEYPAIR} --user-data-file ../tmp/user-data.sh --subnet %s --group %s > ../tmp/ec2-run-instances.out' %(ami, size, zone, region, subnet, sgroup))
-            if region == 'us-west-1':
-                ip = local("cat ../tmp/ec2-run-instances.out | grep INSTANCE | awk '{print $13}'", capture=True)
-            if region in ['us-east-1', 'us-west-2']:
-                ip = local("cat ../tmp/ec2-run-instances.out | grep INSTANCE | awk '{print $12}'", capture=True)
-            rid = local("cat ../tmp/ec2-run-instances.out | grep INSTANCE | awk '{print $2}'", capture=True)
-            local('cat ../templates/template.ldif | sed -e s/HOST/\'%s\'/g -e s/IP/\'%s\'/g -e s/BASEDN/%s/g | ldapadd -x -w %s -D "%s" -h %s' %(name,ip,basedn,secret,admin+basedn,ldap))
-            local('. ../conf/awsdeploy.bashrc; /usr/local/bin/route53 add_record Z4512UDZ56AKC '+name+'.asskickery.us A '+ip)
-            local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-create-tags %s --region %s --tag Name=%s' %(rid,region,name))
-            local('rm ../tmp/user-data.sh')
-            local('rm ../tmp/ec2-run-instances.out')
-            print (blue("SUCCESS: Node '%s' Deployed To %s")%(name,region))
-            local('echo %s >> ../tmp/ip.out' %(ip))
-    return {'ip' : ip, 'rid' : rid}
-
-def new_deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subnet, sgroup, domain, puppetmaster, admin):
+def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subnet, sgroup, domain, puppetmaster, admin):
     creds = config.get_ec2_conf()
     if "." in name:
         print (red("PROBLEM: Do Not Use Periods In Names"))
-    ldapinit = ldap.initialize('ldap://'+ldaphost)
-    ldapinit.simple_bind_s(admin+basedn,secret)
-    ck_node = ldapinit.search_s(basedn,ldap.SCOPE_SUBTREE, '(cn='+name+')',['cn'])
-    if ck_node:
-        print (red("PROBLEM: Node "+name+" Already In LDAP"))
-        sys.exit(1)
-    with lcd(os.path.join(os.path.dirname(__file__),'.')):
-        user_data = local('cat ../templates/user-data.template | sed -e s/HOSTNAME/%s/g -e s/DOMAIN/%s/g -e s/PUPPETMASTER/%s/g' %(name,domain,puppetmaster))
+    ldap_check(ldaphost,basedn,name)
+    template = open(os.path.join(os.path.dirname(__file__),'../templates/user-data.template')).read()
+    user_data = template.replace('HOSTNAME',name).replace('DOMAIN',domain).replace('PUPPETMASTER',puppetmaster)
     ec2conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
     instance_info = ec2conn.run_instances(
         image_id=ami,
@@ -84,21 +52,8 @@ def new_deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, 
     )
     rid = instance_info.instances[0].id
     ip = instance_info.instances[0].private_ip_address
-    dn='cn='+name+',ou=hosts,'+basedn
-    attrs = {}
-    attrs['cn'] = name
-    attrs['objectclass'] = ['top','device','ipHost', 'puppetClient']
-    attrs['environment'] = 'production'
-    attrs['ipHostNumber'] = str(ip)
-    attrs['parentnode'] = 'default'
-    ldif = modlist.addModlist(attrs)
-    ldapinit.add_s(dn,ldif)
-    ldapinit.unbind_s()
-    route53conn = boto.connect_route53(creds['AWS_ACCESS_KEY_ID'],creds['AWS_SECRET_ACCESS_KEY'])
-    changes = ResourceRecordSets(route53conn, hosted_zone_id='Z4512UDZ56AKC')
-    change = changes.add_change("CREATE", name+".asskickery.us", type="A", ttl="600")
-    change.add_value(ip)
-    changes.commit()
+    ldap_add(ldaphost,admin,basedn,secret,name,ip)
+    update_dns(name,ip)
     ec2conn.create_tags([rid], {'Name': name})
     print (blue("SUCCESS: Node '%s' Deployed To %s")%(name,region))
     return {'ip': ip, 'rid' : rid}
@@ -207,6 +162,18 @@ def associate_elastic_ip(elasticip, instance, region='us-east-1'):
         local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-associate-address -a %s -i %s --region %s' %(elasticip, instance, region))
 
 
+#### 
+# Route 53 DNS
+####
+
+def update_dns(name,ip):
+    creds = config.get_ec2_conf()
+    route53conn = boto.connect_route53(creds['AWS_ACCESS_KEY_ID'],creds['AWS_SECRET_ACCESS_KEY'])
+    changes = ResourceRecordSets(route53conn, hosted_zone_id='Z4512UDZ56AKC')
+    change = changes.add_change("CREATE", name+".asskickery.us", type="A", ttl="600")
+    change.add_value(ip)
+    changes.commit()
+
 ###
 # This Checks The Status Of /home/appuser/finished which is applied by puppet
 ###
@@ -223,6 +190,26 @@ def get_aws_deployment_status():
 # This Updates LDAP With The Right Puppet Classes
 ###
 
+def ldap_check(ldaphost,basedn,name):
+    ldapinit = ldap.initialize('ldap://'+ldaphost)
+    ck_node = ldapinit.search_s(basedn,ldap.SCOPE_SUBTREE, '(cn='+name+')',['cn'])
+    if ck_node:
+        print (red("PROBLEM: Node "+name+" Already In LDAP"))
+        sys.exit(1)
+
+def ldap_add(ldaphost,admin,basedn,secret,name,ip):
+    ldapinit = ldap.initialize('ldap://'+ldaphost)
+    ldapinit.simple_bind_s(admin+basedn,secret)
+    dn='cn='+name+',ou=hosts,'+basedn
+    attrs = {}
+    attrs['cn'] = name
+    attrs['objectclass'] = ['top','device','ipHost', 'puppetClient']
+    attrs['environment'] = 'production'
+    attrs['ipHostNumber'] = str(ip)
+    attrs['parentnode'] = 'default'
+    ldif = modlist.addModlist(attrs)
+    ldapinit.add_s(dn,ldif)
+    ldapinit.unbind_s()
 
 def ldap_modify(hostname,puppetClass,az):
     r=config.get_conf(az)
