@@ -112,7 +112,7 @@ def deploy_west_2b_private_4(name, size='m1.small', subnet='subnet-e05def89', zo
     ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
     return ip_rid
 
-def deploy_west_2c_private_6(name, size='m1.small', subnet=' subnet-f85def91', zone='us-west-2c'):
+def deploy_west_2c_private_6(name, size='m1.small', subnet='subnet-f85def91', zone='us-west-2c'):
     r=config.get_pqa_west_conf()
     ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
     return ip_rid
