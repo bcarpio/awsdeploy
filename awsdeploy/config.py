@@ -14,6 +14,7 @@ def get_prod_east_conf():
     r.domain='social.local'
     r.puppetmaster='10.201.2.10'
     r.admin = "cn=admin,"
+    r.zserver = '10.201.6.211'
     return r
 
 def get_devqa_west_conf():
@@ -42,6 +43,7 @@ def get_pqa_west_conf():
     r.domain='social.local'
     r.puppetmaster='10.252.2.27'
     r.admin = "cn=admin,"
+    r.zserver = '10.252.6.180'
     return r
 
 def get_conf(az):

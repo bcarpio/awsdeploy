@@ -2,14 +2,15 @@
 import sys
 from zabbix_api import ZabbixAPI
 
-if (len(sys.argv) < 2):
-	print "ERROR: Please Supply A Hostname"
+if (len(sys.argv) < 3):
+	print "ERROR: Please Supply A Hostname And Zabbix Server"
 	sys.exit(1)
 
-node = sys.argv[1]
+zserver = sys.argv[1]
+node = sys.argv[2]
 
 # The hostname at which the Zabbix web interface is available
-ZABBIX_SERVER = 'http://10.201.6.211/zabbix'
+ZABBIX_SERVER = 'http://'+zserver+'/zabbix'
 
 # Enter credentials for the Zabbix Web Frontend
 username = "admin"
@@ -26,6 +27,3 @@ for host in hosts:
 	host = host['hostid']
 
 zapi.host.delete({ 'hostid' : host })
-
-#zapi.user.updateMedia({ 'users' : [{ "userid": "<%= primary_id %>" }], 'medias' : [{ "mediatypeid": "<%= mediatypeid %>", "sendto": (sys.argv[1]), "active": "0", "severity": "63", "period" : "1-7,00:00-23:59;"}]})
-#zapi.user.updateMedia({ 'users' : [{ "userid": "<%= secondary_id %>" }], 'medias' : [{ "mediatypeid": "<%= mediatypeid %>", "sendto": (sys.argv[2]), "active": "0", "severity": "63", "period" : "1-7,00:00-23:59;"}]})

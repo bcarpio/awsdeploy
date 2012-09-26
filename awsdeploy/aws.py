@@ -125,6 +125,8 @@ def deploy_west_2c_private_6(name, size='m1.small', subnet='subnet-f85def91', zo
 
 def create_ebs_volume(az,size='50',iops='no'):
     r=config.get_conf(az)
+    creds = config.get_ec2_conf()
+    ec2conn = connect_to_region(r.region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
     if az == 'use1a':
         zone = 'us-east-1a'
     elif az == 'use1c':
@@ -139,14 +141,13 @@ def create_ebs_volume(az,size='50',iops='no'):
         zone = 'us-west-2c'
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
         if iops == 'no':
-            ebs_vol = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-create-volume --region %s --size %s --availability-zone %s | awk '{print $2}'" %(r.region, size, zone), capture=True)
+            ebs_vol = ec2conn.create_volume(size, zone)
         elif iops == 'yes':
-            ebs_vol = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-create-volume --region %s --size %s --availability-zone %s --type io1 --iops 1000 | awk '{print $2}'" %(r.region, size, zone), capture=True)
+            ebs_vol = ec2conn.create_volume(size, zone, volume_type='io1', iops='1000')
     return ebs_vol
 
 def attach_ebs_volume(device, ebs_vol, rid, region):
-    with lcd(os.path.join(os.path.dirname(__file__),'.')):
-        local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-attach-volume %s --region %s -i %s -d %s' %(ebs_vol,region,rid,device))
+    ebs_vol.attach(rid, device)
 
 ####
 # Elastic IP Tasks
@@ -213,8 +214,11 @@ def ldap_add(ldaphost,admin,basedn,secret,name,ip):
 
 def ldap_modify(hostname,puppetClass,az):
     r=config.get_conf(az)
-    with lcd(os.path.join(os.path.dirname(__file__),'.')):
-        local("sed -e s/HOST/%s/g -e s/PUPPETCLASS/%s/g -e s/BASEDN/%s/g ../templates/modify.ldif | /usr/bin/ldapmodify -v -x -w %s -D %s%s -h %s" %(hostname,puppetClass,r.basedn,r.secret,r.admin,r.basedn,r.ldap))
+    ldapinit = ldap.initialize('ldap://'+r.ldap)
+    ldapinit.simple_bind_s(r.admin+r.basedn,r.secret)
+    dn='cn='+hostname+',ou=hosts,'+r.basedn
+    mod_attrs = [( ldap.MOD_ADD, 'puppetClass', puppetClass)]
+    ldapinit.modify_s(dn, mod_attrs)
 
 ###
 # This Updates Mongodb With The Right Puppet Classes
@@ -389,7 +393,7 @@ def remove_prod_pqa_ec2_instance(name, az):
     env.warn_only = True
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
         instance = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-describe-instances --region %s --filter tag:Name=%s | grep -v terminated | grep INSTANCE | awk '{print $2}'" %(r.region,name), capture=True)
-        local('zabbix_api/remove_host.py %s' %(name))
+        local('zabbix_api/remove_host.py %s %s' %(r.zserver,name))
         local('/usr/bin/ldapdelete -x -w %s -D "cn=admin,dc=social,dc=local" -h %s cn=%s,ou=hosts,dc=social,dc=local' %(r.secret,r.ldap,name))
         execute(puppet.puppetca_clean,name+'.social.local',host=r.puppetmaster)
         ip = local("host "+name+".asskickery.us | awk '{print $4}'", capture=True)

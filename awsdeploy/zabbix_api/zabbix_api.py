@@ -112,7 +112,7 @@ class ZabbixAPI(object):
     # HTTP authentication
     httpuser = None
     httppasswd = None
-    timeout = 10
+    timeout = 60
     # sub-class instances.
     user = None
     usergroup = None
