@@ -9,6 +9,7 @@ import time
 import puppet
 import git
 import config
+import host_list
 from aws import *
 
 ####
