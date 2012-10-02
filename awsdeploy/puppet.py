@@ -5,16 +5,10 @@ import subprocess
 import os
 
 @task
-def puppetd_test_noop():
-	""" Runs puppetd --test --noop Which Displayed What Will Change """
-	sudo('puppetd --test --noop')
-
-@task
-# @parallel
 def puppetd_test():
 	""" Runs puppetd --test Which Will Update Puppet Changes """
 	env.warn_only = True
-	sudo('puppetd --test')
+	sudo('puppet agent -t')
 
 @task
 def puppetca_list():

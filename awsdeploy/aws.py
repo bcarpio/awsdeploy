@@ -424,7 +424,7 @@ def remove_west_ec2_instance(name, region='us-west-1'):
 @task
 def setup_ten_drive_mirror():
     env.warn_only = True
-    sudo('puppetd --test')
+    sudo('puppet agent -t')
     env.warn_only = True
     sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
     sudo('mdadm --create --force --assume-clean -R /dev/md0 -l0 --chunk=256 --raid-devices=10 /dev/xvdf /dev/xvdg /dev/xvdh /dev/xvdi /dev/xvdj /dev/xvdk /dev/xvdl /dev/xvdm /dev/xvdn /dev/xvdo')
@@ -453,7 +453,7 @@ def setup_ten_drive_mirror():
 @task
 def setup_four_drive_mirror():
     env.warn_only = True
-    sudo('puppetd --test')
+    sudo('puppet agent -t')
     env.warn_only = True
     sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
     sudo('mdadm --create --force --assume-clean -R /dev/md0 -l10 --chunk=256 --raid-devices=4 /dev/xvdf /dev/xvdg /dev/xvdh /dev/xvdi')
@@ -475,7 +475,7 @@ def setup_four_drive_mirror():
 
 def setup_two_drive_mirror():
     env.warn_only = True
-    sudo('puppetd --test')
+    sudo('puppet agent -t')
     env.warn_only = True
     sudo("for i in `cat /proc/mdstat | grep md | awk '{print $1}'`; do mdadm --stop /dev/$i; done")
     sudo('mdadm --create --force --assume-clean -R /dev/md0 -l10 --chunk=256 --raid-devices=4 /dev/xvdf /dev/xvdg')
