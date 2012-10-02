@@ -23,4 +23,12 @@ def puppetca_sign(host):
 @task
 def puppetca_clean(host):
 	""" Runs puppetca --clean <server_name """
-	sudo('puppetca --clean %s' % (host))
+	sudo('puppet ca destroy %s' % (host))
+
+@task
+def puppet_fix_ssl():
+	""" rm -rf /var/lib/puppet/ssl """
+	sudo('service puppet stop')
+	sudo('rm -rf /var/lib/puppet/ssl/*')
+	sudo('puppet agent -t')
+	sudo('service puppet start')
