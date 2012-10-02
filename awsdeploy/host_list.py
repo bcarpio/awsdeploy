@@ -1,6 +1,5 @@
 from fabric.api import *
 from fabric.operations import local,put
-import paramiko
 import socket
 import subprocess
 import os
