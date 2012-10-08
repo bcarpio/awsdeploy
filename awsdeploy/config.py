@@ -43,7 +43,7 @@ def get_pqa_west_conf():
     r.domain='social.local'
     r.puppetmaster='10.252.2.27'
     r.admin = "cn=admin,"
-    r.zserver = '10.252.6.180'
+    r.zserver = '10.252.6.221'
     return r
 
 def get_conf(az):
