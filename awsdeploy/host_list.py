@@ -17,6 +17,6 @@ def pqa_nopuppet_master():
     env.hosts = social_pqa_ip_list
 @task
 def prod():
-    social_prod_ip_list = local("ldapsearch -x -w secret -D 'cn=admin,dc=social,dc=local' -b 'ou=hosts,dc=social,dc=local' -h 10.201.2.176  -LLL  cn=use1* ipHostNumber | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
+    social_prod_ip_list = local("ldapsearch -x -w secret -D 'cn=admin,dc=social,dc=local' -b 'ou=hosts,dc=social,dc=local' -h 10.201.2.176  -LLL  cn=use1* ipHostNumber | grep ipHostNumber | awk '{print $2}' | grep -v 10.201.1.5", capture=True).splitlines()
     env.user = 'ubuntu'
     env.hosts = social_prod_ip_list
