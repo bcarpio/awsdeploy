@@ -77,7 +77,7 @@ def deploy_cassandra(az='dev'):
 
 @task
 def deploy_priv_loadbalancers(appname,az='dev'):
-    aws.third_party_generic_deployment(appname='haproxy-'+appname,puppetClass=('haproxy','stunnel','nodejs'),az=az,size='m1.small')
+    aws.third_party_generic_deployment(appname='haproxy-'+appname,puppetClass=('haproxy','stud','nodejs'),az=az,size='m1.small')
 
 
 @task
