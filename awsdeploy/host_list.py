@@ -71,6 +71,16 @@ def prod_uidelegate():
 	env.hosts = ip_list
 
 @task
+def prod_portauthority():
+	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h 10.201.2.176 cn=*-pri-portauthority*-01 | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
+	env.user = 'ubuntu'
+	env.hosts = ip_list
+
+@task
+def restart_crowsnest():
+	sudo('restart crows-nest')
+
+@task
 def start_blogs():
 	sudo('start blogs')
 
