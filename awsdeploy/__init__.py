@@ -65,6 +65,16 @@ def deploy_node_server(appname,az='dev',count='1',size='m1.medium'):
 def deploy_elasticsearch(appname,az='dev'):
     aws.third_party_generic_deployment(appname='elasticsearch-'+appname,puppetClass='elasticsearch',az=az,size='m1.small')
 
+
+####
+#  Uptime Deployment
+####
+
+@task
+def deploy_uptime(az='dev'):
+    aws.third_party_generic_deployment(appname='uptime',puppetClass='uptime',az=az,size='m1.small')
+    # for now, install mongo and node and uptime app manually
+
 ####
 # Rabbit MQ Deployment
 ####
