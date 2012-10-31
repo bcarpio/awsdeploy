@@ -15,6 +15,7 @@ def get_prod_east_conf():
     r.puppetmaster='10.201.2.10'
     r.admin = "cn=admin,"
     r.zserver = '10.201.6.211'
+    r.static = '10.201.2.26'
     return r
 
 def get_devqa_west_conf():
@@ -30,6 +31,7 @@ def get_devqa_west_conf():
     r.domain='ecollegeqa.net'
     r.puppetmaster='10.52.74.38'
     r.admin = "cn=admin,"
+    r.static = "dev-pri-apache-static-01"
     return r
 
 def get_pqa_west_conf():
@@ -44,6 +46,7 @@ def get_pqa_west_conf():
     r.puppetmaster='10.252.2.27'
     r.admin = "cn=admin,"
     r.zserver = '10.252.6.221'
+    r.static = '10.252.2.169'
     return r
 
 def get_conf(az):

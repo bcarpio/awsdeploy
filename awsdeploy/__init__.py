@@ -10,6 +10,7 @@ import puppet
 import git
 import config
 import host_list
+import mongod
 from aws import *
 
 ####
@@ -28,6 +29,17 @@ def deploy_cheetah(version, az='dev', count='1', size='m1.medium'):
 def deploy_redis(az='dev'):
     aws.third_party_generic_deployment(appname='redis',puppetClass='redis',az=az,size='m1.small')
 
+@task
+def deploy_apt_repo(az='dev'):
+    aws.third_party_generic_deployment(appname='apt',puppetClass='puppet',az=az,size='m1.small')
+
+####
+# Apache Deployment
+####
+
+@task
+def deploy_apache_static(az='dev'):
+    aws.third_party_generic_deployment(appname='apache-static',puppetClass='apache_static',az=az,size='m1.small')
 
 ####
 # Java Server Deployment
@@ -50,8 +62,8 @@ def deploy_node_server(appname,az='dev',count='1',size='m1.medium'):
 ####
 
 @task
-def deploy_elasticsearch(az='dev'):
-    aws.third_party_generic_deployment(appname='elasticsearch',puppetClass='elasticsearch',az=az,size='m1.small')
+def deploy_elasticsearch(appname,az='dev'):
+    aws.third_party_generic_deployment(appname='elasticsearch-'+appname,puppetClass='elasticsearch',az=az,size='m1.small')
 
 ####
 # Rabbit MQ Deployment
@@ -68,7 +80,7 @@ def deploy_rabbitmq(az='dev'):
 
 @task
 def deploy_cassandra(az='dev'):
-    iplist = deploy_three_nodes_with_2_ebs_volumes_raid_0(az=az,appname='cassandra',puppetClass='cassandra',iops='yes',capacity='100',size='m1.xlarge')
+    iplist = deploy_three_nodes_with_2_ebs_volumes_raid_0(az=az,appname='cassandra',puppetClass='cassandra',iops='no',capacity='100',size='m1.xlarge')
     execute(aws.setup_gluster_lvm,hosts=iplist)
 
 ####
@@ -98,8 +110,13 @@ def deploy_mongodb_replica_set_sl(az,shard):
     deploy_five_node_mongodb_replica_set(az,shard=shard,app='sl')
 
 @task
+def deploy_mongodb_replica_set_gt(az,shard):
+    deploy_five_node_mongodb_replica_set(az,shard=shard,app='gt')
+
+@task
 def deploy_mongodb_replica_set_inf(az,shard):
     deploy_three_node_mongodb_replica_set(az,shard=shard,app='inf')
+
 
 ###
 # Gluster Deployment
