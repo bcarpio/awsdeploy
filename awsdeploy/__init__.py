@@ -96,7 +96,7 @@ def deploy_priv_loadbalancers(appname,az='dev'):
 def deploy_pub_loadbalancers(appname,az):
     r=config.get_conf(az)
     allocid = aws.allocate_elastic_ip(region=r.region)
-    ip_rid = aws.third_party_generic_deployment(appname='haproxy-'+appname,puppetClass=('haproxy','stunnel','nodejs'),az=az,size='m1.small',dmz='pub')
+    ip_rid = aws.third_party_generic_deployment(appname='haproxy-'+appname,puppetClass=('haproxy','stud','nodejs'),az=az,size='m1.small',dmz='pub')
     rid = ip_rid['rid']
     time.sleep(30)
     aws.associate_elastic_ip(elasticip=allocid,instance=rid,region=r.region)
