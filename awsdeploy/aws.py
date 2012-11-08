@@ -55,6 +55,7 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subn
     ldap_add(ldaphost,admin,basedn,secret,name,ip)
     #execute(add_node_to_mongodb_enc,name,host=puppetmaster)
     update_dns(name,ip)
+    time.sleep(2)
     ec2conn.create_tags([rid], {'Name': name})
     print (blue("SUCCESS: Node '%s' Deployed To %s")%(name,region))
     return {'ip': ip, 'rid' : rid}
