@@ -66,6 +66,14 @@ def deploy_elasticsearch(appname,az='dev'):
     aws.third_party_generic_deployment(appname='elasticsearch-'+appname,puppetClass='elasticsearch',az=az,size='m1.small')
 
 ####
+#  GrayLog2 Search Deployment
+####
+
+@task
+def deploy_graylog2(az='dev'):
+    aws.third_party_generic_deployment(appname='graylog2',puppetClass=('elasticsearch','graylog2','java','nodejs'),az=az,size='m1.xlarge')
+
+####
 # Rabbit MQ Deployment
 ####
 
@@ -116,6 +124,10 @@ def deploy_mongodb_replica_set_gt(az,shard):
 @task
 def deploy_mongodb_replica_set_inf(az,shard):
     deploy_three_node_mongodb_replica_set(az,shard=shard,app='inf')
+
+@task
+def deploy_mongodb_replica_set_gl2(az,shard):
+    deploy_three_node_mongodb_replica_set(az,shard=shard,app='gl2')
 
 
 ###

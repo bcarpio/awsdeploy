@@ -8,7 +8,10 @@ import os
 def puppetd_test():
 	""" Runs puppetd --test Which Will Update Puppet Changes """
 	env.warn_only = True
-	sudo('puppet agent -t')
+	env.user = 'ubuntu'
+	output = sudo('puppet agent -t')
+	print output
+	return output
 
 @task
 def puppetca_list():

@@ -77,6 +77,12 @@ def prod_portauthority():
 	env.hosts = ip_list
 
 @task
+def prod_haproxy():
+	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h 10.201.2.176 cn=*-pub-haproxy* | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
+	env.user = 'ubuntu'
+	env.hosts = ip_list
+
+@task
 def restart_crowsnest():
 	sudo('restart crows-nest')
 
