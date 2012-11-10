@@ -52,11 +52,11 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subn
     )
     rid = instance_info.instances[0].id
     ip = instance_info.instances[0].private_ip_address
+    time.sleep(2)
+    ec2conn.create_tags([rid], {'Name': name})
     ldap_add(ldaphost,admin,basedn,secret,name,ip)
     #execute(add_node_to_mongodb_enc,name,host=puppetmaster)
     update_dns(name,ip)
-    time.sleep(2)
-    ec2conn.create_tags([rid], {'Name': name})
     print (blue("SUCCESS: Node '%s' Deployed To %s")%(name,region))
     return {'ip': ip, 'rid' : rid}
 
@@ -201,6 +201,7 @@ def ldap_check(ldaphost,basedn,name):
         sys.exit(1)
 
 def ldap_add(ldaphost,admin,basedn,secret,name,ip):
+    name = name.encode('ascii')
     ldapinit = ldap.initialize('ldap://'+ldaphost)
     ldapinit.simple_bind_s(admin+basedn,secret)
     dn='cn='+name+',ou=hosts,'+basedn
@@ -219,6 +220,7 @@ def ldap_modify(hostname,puppetClass,az):
     ldapinit = ldap.initialize('ldap://'+r.ldap)
     ldapinit.simple_bind_s(r.admin+r.basedn,r.secret)
     dn='cn='+hostname+',ou=hosts,'+r.basedn
+    puppetClass = puppetClass.encode('ascii')
     mod_attrs = [( ldap.MOD_ADD, 'puppetClass', puppetClass)]
     ldapinit.modify_s(dn, mod_attrs)
 

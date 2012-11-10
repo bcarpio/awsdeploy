@@ -4,6 +4,7 @@ import socket
 import subprocess
 import os
 import time
+import config
 
 @task
 def pqa():
@@ -81,6 +82,16 @@ def prod_haproxy():
 	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h 10.201.2.176 cn=*-pub-haproxy* | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
 	env.user = 'ubuntu'
 	env.hosts = ip_list
+
+def host_ldap_query(zone,az,appname):
+    r=config.get_conf(az)
+    ip_list = local("/usr/bin/ldapsearch -x -w secret -D cn=admin,"+r.basedn+" -b "+r.basedn+" -h "+r.ldap+" cn="+az+"-"+zone+"-"+appname+"* |grep 'cn:' | awk '{print $2}'", capture=True).splitlines()
+    return ip_list
+
+def ip_ldap_query(zone,az,appname):
+    r=config.get_conf(az)
+    ip_list = local("/usr/bin/ldapsearch -x -w secret -D cn=admin,"+r.basedn+" -b "+r.basedn+" -h "+r.ldap+" cn="+az+"-"+zone+"-"+appname+"* | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
+    return ip_list
 
 @task
 def restart_crowsnest():

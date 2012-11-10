@@ -160,7 +160,8 @@ def remove_instance(hostname):
         aws.remove_prod_pqa_ec2_instance(name=hostname,az=az)
     if az in ('dev', 'qa'):
         aws.remove_west_ec2_instance(name=hostname)
-
+    output = [ 'OK' ]
+    return output
 
 ####
 # Compare EC2 to LDAP and Vice Versa
