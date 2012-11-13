@@ -18,7 +18,7 @@ from aws import *
 ####
 
 @task
-def deploy_cheetah(version, az='dev', count='1', size='m1.medium'):
+def deploy_cheetah(version, az='dev', count='1', size='m1.large'):
     aws.app_deploy_generic(version=version, count=count, size=size, appname='cheetah', puppetClass=('java','cheetah', 'nodejs'), az=az)
 
 ####
