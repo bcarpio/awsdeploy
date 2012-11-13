@@ -2,7 +2,7 @@ from flask import Flask, flash, abort, redirect, url_for, request, render_templa
 from fabric.api import *
 from fabric.operations import local,put
 import os, sys
-sys.path.append('../awsdeploy_python_module/')
+sys.path.append('../')
 from awsdeploy import *
 import boto.ec2.elb
 
