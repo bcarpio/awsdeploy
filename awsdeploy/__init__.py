@@ -46,8 +46,8 @@ def deploy_apache_static(az='dev'):
 ####
 
 @task
-def deploy_java_server(appname,az='dev',count='1',size='m1.medium'):
-    aws.app_deploy_generic(version='0x1x0',appname=appname,puppetClass=('java','nodejs'),az=az,count=count,size=size)
+def deploy_java_server(appname,version='0x1x0',az='dev',count='1',size='m1.medium'):
+    aws.app_deploy_generic(appname=appname,version=version,puppetClass=('java','nodejs'),az=az,count=count,size=size)
 
 ####
 # NodeJs Server Deployment
