@@ -415,7 +415,7 @@ def remove_west_ec2_instance(name, region='us-west-1'):
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
         instance = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-describe-instances --region %s --filter tag:Name=%s | grep -v terminated | grep INSTANCE | awk '{print $2}'" %(region,name), capture=True)
         local('/usr/bin/ldapdelete -x -w %s -D "cn=admin,dc=manhattan,dc=dev" -h %s cn=%s,ou=hosts,dc=manhattan,dc=dev' %(r.secret,r.ldap,name))
-        execute(puppet.puppetca_clean,name+'.ecollegeqa.net',host='10.52.74.38')
+        execute(puppet.puppetca_clean,name+'.ecollegeqa.net',host=r.puppetmaster)
         ip = local("host "+name+".asskickery.us | awk '{print $4}'", capture=True)
         local('. ../conf/awsdeploy.bashrc; /usr/local/bin/route53 del_record Z4512UDZ56AKC '+name+'.asskickery.us. A '+ip)
         local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-terminate-instances --region %s %s' %(region,instance))
