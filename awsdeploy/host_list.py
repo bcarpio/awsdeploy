@@ -7,16 +7,23 @@ import time
 import config
 
 @task
+def dev():
+	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h http://10.52.201.88 cn=dev-* | grep ipHostNumber | grep -v 10.52.201.74 | awk '{print $2}'", capture=True).splitlines()
+	env.user = 'ubuntu'
+	env.hosts = ip_list
+
+@task
+def qa():
+	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h http://10.52.201.88 cn=qa-* | grep ipHostNumber | grep -v 10.52.201.74 | awk '{print $2}'", capture=True).splitlines()
+	env.user = 'ubuntu'
+	env.hosts = ip_list
+
+@task
 def pqa():
     social_pqa_ip_list = local("ldapsearch -x -w secret -D 'cn=admin,dc=social,dc=local' -b 'ou=hosts,dc=social,dc=local' -h 10.252.2.165  -LLL  cn=usw2* ipHostNumber | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
     env.user = 'ubuntu'
     env.hosts = social_pqa_ip_list
 
-@task
-def pqa_nopuppet_master():
-    social_pqa_ip_list = local("ldapsearch -x -w secret -D 'cn=admin,dc=social,dc=local' -b 'ou=hosts,dc=social,dc=local' -h 10.252.2.165  -LLL  cn=usw2* ipHostNumber | grep ipHostNumber | grep -v 10.252.2.27 | awk '{print $2}'", capture=True).splitlines()
-    env.user = 'ubuntu'
-    env.hosts = social_pqa_ip_list
 @task
 def prod():
     social_prod_ip_list = local("ldapsearch -x -w secret -D 'cn=admin,dc=social,dc=local' -b 'ou=hosts,dc=social,dc=local' -h 10.201.2.176  -LLL  cn=use1* ipHostNumber | grep ipHostNumber | awk '{print $2}' | grep -v 10.201.1.5", capture=True).splitlines()
@@ -30,8 +37,18 @@ def prod_blogs():
 	env.hosts = ip_list
 
 @task
+def pqa_blogs():
+	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h 10.252.4.23 cn=*-pri-blogs* | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
+	env.user = 'ubuntu'
+	env.hosts = ip_list
+@task
 def prod_follows():
 	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h 10.201.2.176 cn=*-pri-follows* | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
+	env.user = 'ubuntu'
+	env.hosts = ip_list
+
+def pqa_follows():
+	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h 10.252.4.23 cn=*-pri-follows* | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
 	env.user = 'ubuntu'
 	env.hosts = ip_list
 
@@ -42,8 +59,20 @@ def prod_persona():
 	env.hosts = ip_list
 
 @task
+def pqa_persona():
+	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h 10.252.4.23 cn=*-pri-persona* | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
+	env.user = 'ubuntu'
+	env.hosts = ip_list
+
+@task
 def prod_presence():
 	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h 10.201.2.176 cn=*-pri-presence* | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
+	env.user = 'ubuntu'
+	env.hosts = ip_list
+
+@task
+def pqa_presence():
+	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h 10.252.4.23 cn=*-pri-presence* | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
 	env.user = 'ubuntu'
 	env.hosts = ip_list
 
@@ -54,8 +83,20 @@ def prod_share():
 	env.hosts = ip_list
 
 @task
+def pqa_share():
+	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h 10.252.4.23 cn=*-pri-share* | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
+	env.user = 'ubuntu'
+	env.hosts = ip_list
+
+@task
 def prod_socialagent():
 	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h 10.201.2.176 cn=*-pri-socialagent* | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
+	env.user = 'ubuntu'
+	env.hosts = ip_list
+
+@task
+def pqa_socialagent():
+	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h 10.252.4.23 cn=*-pri-socialagent* | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
 	env.user = 'ubuntu'
 	env.hosts = ip_list
 
@@ -66,10 +107,23 @@ def prod_streams():
 	env.hosts = ip_list
 
 @task
+def pqa_streams():
+	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h 10.252.4.23 cn=*-pri-streams* | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
+	env.user = 'ubuntu'
+	env.hosts = ip_list
+
+@task
 def prod_uidelegate():
 	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h 10.201.2.176 cn=*-pri-uidelegate* | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
 	env.user = 'ubuntu'
 	env.hosts = ip_list
+
+@task
+def pqa_uidelegate():
+	ip_list = local("ldapsearch -x -w secret -D cn=admin,dc=social,dc=local -b dc=social,dc=local -h 10.252.4.23 cn=*-pri-uidelegate* | grep ipHostNumber | awk '{print $2}'", capture=True).splitlines()
+	env.user = 'ubuntu'
+	env.hosts = ip_list
+
 
 @task
 def prod_portauthority():
@@ -170,3 +224,10 @@ def stop_uidelegate():
 def restart_harbor():
 	sudo('stop spindrift-harbor')
 	sudo('start spindrift-harbor')
+
+@task
+def change_dev_puppet():
+	sudo('sed s/^10.52.74.38.*/"10.52.201.74    dev-pri-puppet-01.ecollegeqa.net  dev-pri-puppet-01 puppet"/g -i /etc/hosts')
+	sudo('rm -rf /var/lib/puppet/ssl/*')
+	env.warn_only = True
+	sudo('puppet agent -t')

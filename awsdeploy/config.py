@@ -29,7 +29,7 @@ def get_devqa_west_conf():
     r.subnet='subnet-d43b8abd'
     r.sgroup='sg-926578fe'
     r.domain='ecollegeqa.net'
-    r.puppetmaster='10.52.74.38'
+    r.puppetmaster='10.52.201.74'
     r.admin = "cn=admin,"
     r.static = "dev-pri-apache-static-01"
     return r

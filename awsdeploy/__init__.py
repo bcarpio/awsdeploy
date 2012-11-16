@@ -42,6 +42,14 @@ def deploy_apache_static(az='dev'):
     aws.third_party_generic_deployment(appname='apache-static',puppetClass='apache_static',az=az,size='m1.small')
 
 ####
+# Puppetmaster Deployment
+####
+
+@task
+def deploy_puppetmaster(az='dev'):
+    aws.third_party_generic_deployment(appname='puppet',puppetClass='puppetmaster',az=az,size='m1.small')
+
+####
 # Java Server Deployment
 ####
 

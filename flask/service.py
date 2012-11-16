@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-	aws_urls = ['/aws/node/deploy/az/appname/version/puppetClass/count/size','/aws/node/undeploy/hostname','/aws/node/az/pri/appname/ip', '/aws/node/az/pub/appname/hostname', '/aws/node/puppet/apply/node_name']
+	aws_urls = ['/aws/node/deploy/az/appname/version/puppetClass/count/size','/aws/node/deploy/mongodb/az/app/shard','/aws/node/undeploy/hostname','/aws/node/az/pri/appname/ip', '/aws/node/az/pub/appname/hostname', '/aws/node/puppet/apply/node_name']
 	creds = config.get_ec2_conf()
 
 	prodconn = connect_to_region('us-east-1', aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY']) 
@@ -103,6 +103,10 @@ def deploy_app_node(az=None,appname=None,version=None,count=None,puppetClass=Non
 def undeploy_app_node(hostname=None):
 	dict = remove_instance(hostname=hostname)
 	return Response(json.dumps(dict), mimetype='application/json')
+
+@app.route('/aws/node/deploy/mongodb/<az>/<app>/<shard>')
+def deploy_mongodb(az=None,app=None,shard=None):
+	dict = deploy_five_node_mongodb_replica_set(az=az,shard=shard,app=app)
 
 @app.route('/aws/node/puppet/apply/<hostname>')
 def puppetapply(hostname=None):
