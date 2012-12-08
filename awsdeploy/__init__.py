@@ -11,6 +11,8 @@ import git
 import config
 import host_list
 import mongod
+import cassandra
+import hadoop
 from aws import *
 
 ####
@@ -32,6 +34,15 @@ def deploy_redis(az='dev'):
 @task
 def deploy_apt_repo(az='dev'):
     aws.third_party_generic_deployment(appname='apt',puppetClass='puppet',az=az,size='m1.small')
+
+####
+# Zookeeper Deployment
+####
+
+@task
+def deploy_zookeeper(appname,az='dev'):
+    aws.third_party_generic_deployment(appname=appname+'-zookeeper',puppetClass=('java','zookeeper'),az=az,size='m1.small')
+
 
 ####
 # Apache Deployment
@@ -57,13 +68,23 @@ def deploy_puppetmaster(az='dev'):
 def deploy_java_server(appname,version='0x1x0',az='dev',count='1',size='m1.medium'):
     aws.app_deploy_generic(appname=appname,version=version,puppetClass=('java','nodejs'),az=az,count=count,size=size)
 
+
+####
+# Nginx Server Deployment
+####
+
+@task
+def deploy_nginx_server(appname,version,az='dev',count='1',size='m1.small'):
+    aws.app_deploy_generic(appname=appname,version=version,puppetClass=('nginx','nodejs'),az=az,count=count,size=size)
+
+
 ####
 # NodeJs Server Deployment
 ####
 
 @task
-def deploy_node_server(appname,az='dev',count='1',size='m1.medium'):
-    aws.app_deploy_generic(version='0x1x0',appname=appname,puppetClass='nodejs',az=az,count=count,size=size)
+def deploy_node_server(appname,version,az='dev',count='1',size='m1.medium'):
+    aws.app_deploy_generic(version=version,appname=appname,puppetClass='nodejs',az=az,count=count,size=size)
 
 ####
 #  Elastic Search Deployment
@@ -96,8 +117,8 @@ def deploy_graylog2(az='dev'):
 ####
 
 @task
-def deploy_rabbitmq(az='dev'):
-    ip = aws.deploy_one_node_with_10_ebs_io_volumes_raid_0(appname='rabbitmq',puppetClass=('rabbitmq','stdlib'),az=az,size='m1.xlarge')
+def deploy_rabbitmq(appname,az='dev'):
+    ip = aws.deploy_one_node_with_10_ebs_io_volumes_raid_0(appname=appname+'-rabbitmq',puppetClass=('rabbitmq','stdlib'),az=az,size='m1.xlarge')
     execute(aws.setup_rabbit_lvm,hosts=ip)
 
 ####
@@ -105,9 +126,15 @@ def deploy_rabbitmq(az='dev'):
 ####
 
 @task
-def deploy_cassandra(az='dev'):
-    iplist = deploy_three_nodes_with_2_ebs_volumes_raid_0(az=az,appname='cassandra',puppetClass='cassandra',iops='no',capacity='100',size='m1.xlarge')
+def deploy_three_node_cassandra(appname,az='dev'):
+    iplist = deploy_three_nodes_with_2_ebs_volumes_raid_0(az=az,appname=appname+'-cassandra',puppetClass=('java','cassandra'),iops='no',capacity='100',size='m1.xlarge')
     execute(aws.setup_gluster_lvm,hosts=iplist)
+
+@task
+def deploy_five_node_cassandra(appname,az='dev'):
+    iplist = deploy_five_nodes_with_4_ebs_volumes_raid_0(az=az,appname=appname+'-cassandra',puppetClass=('java','cassandra'),iops='no',capacity='100',size='m1.xlarge')
+    execute(aws.setup_gluster_lvm,hosts=iplist)
+    execute(cassandra.move_cassandra_home_to_data_cassandra,hosts=iplist)
 
 ####
 # Load Balancer Deployment
@@ -156,6 +183,17 @@ def deploy_mongodb_replica_set_gl2(az,shard):
 def deploy_gluster(az,app):
     deploy_five_node_gluster_cluster(az,app=app)
 
+###
+# Storm Deployment
+###
+
+@task
+def deploy_nimbus(appname,az='dev'):
+    aws.third_party_generic_deployment(appname=appname+'-nimbus',puppetClass=('java','storm::nimbus','storm::ui'),az=az,size='m1.small')
+
+@task
+def deploy_storm(appname,az='dev'):
+    aws.third_party_generic_deployment(appname=appname+'-storm',puppetClass=('java','storm::supervisor'),az=az,size='m1.small')
     
 ####
 # Remove An Instance

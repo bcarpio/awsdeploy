@@ -1,0 +1,48 @@
+
+{% include "header.html" ignore missing %}
+
+<div class="row-fluid">
+    <div class="span9 offset1" align="center">
+	<span class="label label-info">Instances</span></br>
+	<p align="left">
+		<span class="label label-info">Search:</span> <input type="text" id="kwd_search" class="input-medium search-query" value=""/>
+	</p>
+	<p>
+		<table class="table table-striped" id="simpleTable">
+		<thead>
+		<tr style="font-weight:bold">
+		<th data-sort="string">Name</th><th data-sort="string">Instance ID</th><th data-sort="string">IP</th><th data-sort="string">Size</th><th data-sort="string">Status</th><th>Reboot</th><th>Delete</th>
+		</tr>
+		</thead>
+		<tbody>
+		{% for instance in instance_list %}
+		<tr>
+		<td>
+		{{instance['name']}}
+		</td>
+		<td>
+		{{instance['instance_id']}}
+		</td>
+		<td>
+		{{instance['ip']}}
+		</td>
+		<td>
+		{{instance['instance_type']}}
+		</td>
+		<td>
+		{{instance['status']}}
+		</td>
+		<td>
+		<a href="/aws/instances/{{region}}/reboot/{{instance['instance_id']}}"><button class="btn btn-success btn-mini" type="button">Reboot</button></a>	
+		</td>
+		<td>
+		<a href="/aws/instances/{{region}}/delete/{{instance['name']}}"><button class="btn btn-danger btn-mini" type="button">Delete</button></a>	
+		</td>
+		</tr>
+		{% endfor %}
+		</tbody>
+		</table>
+	</div>
+</div>
+</body>
+</html>

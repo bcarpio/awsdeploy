@@ -156,13 +156,16 @@ def attach_ebs_volume(device, ebs_vol, rid, region):
 ####
 
 def allocate_elastic_ip(region='us-east-1'):
-    with lcd(os.path.join(os.path.dirname(__file__),'.')):
-        allocid = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-allocate-address -d vpc --region %s | awk '{print $4}'" %(region), capture=True)
+    creds = config.get_ec2_conf()
+    ec2conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY']) 
+    allocid = ec2conn.allocate_address(domain='vpc')
+    allocid = allocid.allocation_id
     return allocid
 
 def associate_elastic_ip(elasticip, instance, region='us-east-1'):
-    with lcd(os.path.join(os.path.dirname(__file__),'.')):
-        local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-associate-address -a %s -i %s --region %s' %(elasticip, instance, region))
+    creds = config.get_ec2_conf()
+    ec2conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
+    ec2conn.associate_address(instance_id=instance,allocation_id=elasticip,public_ip=None)
 
 
 #### 
@@ -393,32 +396,44 @@ def cleanup():
 
 def remove_prod_pqa_ec2_instance(name, az):
     r=config.get_conf(az)
+    creds = config.get_ec2_conf()
     authinfo = config.auth()
     env.user = authinfo['user']
     env.key_filename = authinfo['key_filename']
     env.warn_only = True
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
-        instance = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-describe-instances --region %s --filter tag:Name=%s | grep -v terminated | grep INSTANCE | awk '{print $2}'" %(r.region,name), capture=True)
         local('zabbix_api/remove_host.py %s %s' %(r.zserver,name))
         local('/usr/bin/ldapdelete -x -w %s -D "cn=admin,dc=social,dc=local" -h %s cn=%s,ou=hosts,dc=social,dc=local' %(r.secret,r.ldap,name))
         execute(puppet.puppetca_clean,name+'.social.local',host=r.puppetmaster)
         ip = local("host "+name+".asskickery.us | awk '{print $4}'", capture=True)
         local('. ../conf/awsdeploy.bashrc; /usr/local/bin/route53 del_record Z4512UDZ56AKC '+name+'.asskickery.us. A '+ip)
-        local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-terminate-instances --region %s %s' %(r.region,instance))
+    ec2conn = connect_to_region(r.region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
+    instances = ec2conn.get_all_instances(filters={'tag:Name' : name})
+    for instance in instances:
+        instance_id = instance.instances[0].id
+        list = []
+        list.append(instance_id)
+        ec2conn.terminate_instances(instance_ids=list)
 
 def remove_west_ec2_instance(name, region='us-west-1'):
     r=config.get_devqa_west_conf()
+    creds = config.get_ec2_conf()
     authinfo = config.auth()
     env.user = authinfo['user']
     env.key_filename = authinfo['key_filename']
     env.warn_only = True
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
-        instance = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-describe-instances --region %s --filter tag:Name=%s | grep -v terminated | grep INSTANCE | awk '{print $2}'" %(region,name), capture=True)
         local('/usr/bin/ldapdelete -x -w %s -D "cn=admin,dc=manhattan,dc=dev" -h %s cn=%s,ou=hosts,dc=manhattan,dc=dev' %(r.secret,r.ldap,name))
         execute(puppet.puppetca_clean,name+'.ecollegeqa.net',host=r.puppetmaster)
         ip = local("host "+name+".asskickery.us | awk '{print $4}'", capture=True)
         local('. ../conf/awsdeploy.bashrc; /usr/local/bin/route53 del_record Z4512UDZ56AKC '+name+'.asskickery.us. A '+ip)
-        local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-terminate-instances --region %s %s' %(region,instance))
+    ec2conn = connect_to_region(r.region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
+    instances = ec2conn.get_all_instances(filters={'tag:Name' : name})
+    for instance in instances:
+        instance_id = instance.instances[0].id
+        list = []  
+        list.append(instance_id)
+        ec2conn.terminate_instances(instance_ids=list)
 
 ####
 # File System Related tasks
@@ -532,7 +547,7 @@ def setup_rabbit_lvm():
     sudo('chown -R rabbitmq:rabbitmq /data/')
     sudo('service rabbitmq-server stop')
     sudo('rm -rf /var/lib/rabbitmq/')
-    sudo('ln -s ln -s /data/ /var/lib/rabbitmq')
+    sudo('ln -s /data/ /var/lib/rabbitmq')
     sudo('service rabbitmq-server start')
 
 ####
@@ -553,7 +568,7 @@ def deploy_one_node_with_10_ebs_io_volumes_raid_0(az,appname,puppetClass,iops='y
     execute(setup_ten_drive_mirror, host=ip)
     return ip
 
-def deploy_five_nodes_with_4_ebs_volumes_raid_0(az,appname,puppetClass,size='m1.xlarge'):
+def deploy_five_nodes_with_4_ebs_volumes_raid_0(az,appname,puppetClass,iops='no',capacity='100',size='m1.xlarge'):
     r=config.get_conf(az)
     iplist = []
     if az in ['use1a', 'use1c', 'use1d']:
@@ -564,7 +579,7 @@ def deploy_five_nodes_with_4_ebs_volumes_raid_0(az,appname,puppetClass,size='m1.
             iplist.append(ip) 
             time.sleep(120)
             for lun in ['/dev/sdf', '/dev/sdg', '/dev/sdh', '/dev/sdi']:
-                ebs_vol = create_ebs_volume(az=azloop)
+                ebs_vol = create_ebs_volume(az=azloop,iops=iops,size=capacity)
                 attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
     if az in ['usw2a', 'usw2b', 'usw2c']:
         for azloop in ['usw2a', 'usw2a', 'usw2b', 'usw2b', 'usw2c']:
@@ -574,7 +589,7 @@ def deploy_five_nodes_with_4_ebs_volumes_raid_0(az,appname,puppetClass,size='m1.
             iplist.append(ip)
             time.sleep(120)
             for lun in ['/dev/sdf', '/dev/sdg', '/dev/sdh', '/dev/sdi']:
-                ebs_vol = create_ebs_volume(az=azloop)
+                ebs_vol = create_ebs_volume(az=azloop,iops=iops,size=capacity)
                 attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
     time.sleep(300)
     env.parallel = True

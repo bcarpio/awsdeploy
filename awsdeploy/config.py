@@ -68,3 +68,7 @@ def get_ec2_conf():
     AWS_SECRET_ACCESS_KEY = 'bM9ijJUPqBPF/GjamHrsPpLZOBADpnroTWr8ko5S'
     EC2_KEYPAIR = 'awsdeploy_key'
     return {'AWS_ACCESS_KEY_ID' : AWS_ACCESS_KEY_ID, 'AWS_SECRET_ACCESS_KEY' : AWS_SECRET_ACCESS_KEY, 'EC2_KEYPAIR' : EC2_KEYPAIR}
+
+def region_list():
+    region_list = ['us-east-1', 'us-west-2','us-west-1']
+    return region_list

@@ -1,0 +1,40 @@
+
+{% include "header.html" ignore missing %}
+
+<div class="row-fluid">
+    <div class="span9 offset1" align="center">
+	<span class="label label-info">Instance Events</span></br>
+	<p>
+		<table class="table table-striped">
+		<tr style="font-weight:bold">
+		<td>Name</td><td>Instance ID</td><td>Event</td><td>Description</td><td>Event Before</td><td>Event After</td><td>Delete</td>
+		</tr>
+		{% for instance_event in instance_event_list %}
+		<tr>
+		<td>
+		{{instance_event['name']}}
+		</td>
+		<td>
+		{{instance_event['instance_id']}}
+		</td>
+		<td>
+		{{instance_event['event']}}
+		</td>
+		<td>
+		{{instance_event['description']}}
+		</td>
+		<td>
+		{{instance_event['event_before']}}
+		</td>
+		<td>
+		{{instance_event['event_before']}}
+		</td>
+		<td>
+		<a href="/aws/instance_events/{{region}}/delete/{{instance_event['name']}}"><button class="btn btn-danger btn-mini" type="button">Delete</button></a>
+		</tr>
+		{% endfor %}
+		</table>
+	</div>
+</div>
+</body>
+</html>
