@@ -7,103 +7,60 @@ import os, sys
 sys.path.append('../')
 from awsdeploy import *
 import boto.ec2.elb
+import aws_stats
+import ebs_volumes
 
 app = Flask(__name__)
 
+#### Home Page
+
 @app.route('/')
 def index():
-    aws_urls = ['/aws/node/deploy/az/appname/version/puppetClass/count/size','/aws/node/deploy/mongodb/az/app/shard','/aws/node/undeploy/hostname','/aws/node/az/pri/appname/ip', '/aws/node/az/pub/appname/hostname', '/aws/node/puppet/apply/node_name']
-
-    list = []
-    creds = config.get_ec2_conf()
-
-    for region in config.region_list():
-        conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
-        zones = conn.get_all_zones()
-        instances = conn.get_all_instance_status()
-        instance_count = len(instances)
-        ebs = conn.get_all_volumes()
-        ebscount = len(ebs)
-        unattached_ebs = 0
-        unattached_eli = 0
-        event_count = 0
-   
-        for instance in instances:
-            events = instance.events
-            if events:
-                event_count = event_count + 1
-
-        for vol in ebs:
-            state = vol.attachment_state()
-            if state == None:
-                unattached_ebs = unattached_ebs + 1
-
-        elis = conn.get_all_addresses()
-        eli_count = len(elis)
-
-
-        for eli in elis:
-            instance_id = eli.instance_id
-            if not instance_id:
-                unattached_eli = unattached_eli + 1
-
-        connelb = boto.ec2.elb.connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
-        elb = connelb.get_all_load_balancers()
-        elb_count = len(elb)
-        list.append({ 'region' : region, 'zones': zones, 'instance_count' : instance_count, 'ebscount' : ebscount, 'unattached_ebs' : unattached_ebs, 'eli_count' : eli_count, 'unattached_eli' : unattached_eli, 'elb_count' : elb_count, 'event_count' : event_count})
-
+    
+    dict = aws_stats.aws_stats()
+    list = dict['list']
+    aws_urls = dict['aws_urls']
+    
     return render_template('index.html',list=list,aws_urls=aws_urls)
 
 #### PAGE LINKS
 
 @app.route('/viawest')
-def viawest():
+def app_route_viawest():
 	return render_template('viawest.html')
 
 @app.route('/rackspace')
-def rackspace():
+def app_route_rackspace():
 	return render_template('rackspace.html')
 
 @app.route('/pt_pod')
-def ptpod():
+def app_route_ptpod():
 	return render_template('pt_pod.html')
 
 @app.route('/cornell')
-def cornell():
+def app_route_cornell():
 	return render_template('cornell.html')
 
 @app.route('/boston')
-def boston():
+def app_route_boston():
 	return render_template('boston.html')
 
 @app.route('/aws/deploy')
-def aws_deploy():
+def app_route_aws_deploy():
     return render_template('aws_deploy.html')
 
-#### AWS Resource Management 
+#### AWS Web EBS Volume Management 
 
 @app.route('/aws/ebs_volumes/<region>/')
-def ebs_volumes(region=None):
-        creds = config.get_ec2_conf()
-        conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
-        ebs = conn.get_all_volumes()
-        ebs_vol = []
-        for vol in ebs:
-                state = vol.attachment_state()
-                if state == None:
-                        ebs_info = { 'id' : vol.id, 'size' : vol.size, 'iops' : vol.iops, 'status' : vol.status }
-                        ebs_vol.append(ebs_info)
-        return render_template('ebs_volume.html',ebs_vol=ebs_vol,region=region)
+def app_route_ebs_volumes(region=None):
+    dict = ebs_volumes.ebs_volumes(region=region)
+    ebs_vol = dict['ebs_vol']
+    return render_template('ebs_volume.html',ebs_vol=ebs_vol,region=region)
 
 @app.route('/aws/ebs_volumes/<region>/delete/<vol_id>')
-def delete_ebs_vol(region=None,vol_id=None):
-        creds = config.get_ec2_conf()
-        conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
-        vol_id = vol_id.encode('ascii')
-        vol_ids = conn.get_all_volumes(volume_ids=vol_id)
-        for vol in vol_ids:
-                vol.delete()
-        return redirect(url_for('ebs_volumes', region=region))
+def app_route_delete_ebs_vol(region=None,vol_id=None):
+    ebs_volumes.delete_ebs_vol(region=region,vol_id=vol_id) 
+    return redirect(url_for('app_route_ebs_volumes', region=region))
 
 @app.route('/aws/elastic_ips/<region>/')
 def elastic_ips(region=None):
