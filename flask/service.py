@@ -9,6 +9,8 @@ from awsdeploy import *
 import boto.ec2.elb
 import aws_stats
 import ebs_volumes
+import elastic_ips
+import aws_instance
 
 app = Flask(__name__)
 
@@ -16,11 +18,9 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    
     dict = aws_stats.aws_stats()
     list = dict['list']
     aws_urls = dict['aws_urls']
-    
     return render_template('index.html',list=list,aws_urls=aws_urls)
 
 #### PAGE LINKS
@@ -53,8 +53,7 @@ def app_route_aws_deploy():
 
 @app.route('/aws/ebs_volumes/<region>/')
 def app_route_ebs_volumes(region=None):
-    dict = ebs_volumes.ebs_volumes(region=region)
-    ebs_vol = dict['ebs_vol']
+    ebs_vol = ebs_volumes.ebs_volumes(region=region)
     return render_template('ebs_volume.html',ebs_vol=ebs_vol,region=region)
 
 @app.route('/aws/ebs_volumes/<region>/delete/<vol_id>')
@@ -63,88 +62,40 @@ def app_route_delete_ebs_vol(region=None,vol_id=None):
     return redirect(url_for('app_route_ebs_volumes', region=region))
 
 @app.route('/aws/elastic_ips/<region>/')
-def elastic_ips(region=None):
-        creds = config.get_ec2_conf()
-        conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
-        elis = conn.get_all_addresses()
-        un_eli = []
-        for eli in elis:
-                instance_id = eli.instance_id
-                if not instance_id:
-                        eli_info = { 'public_ip' : eli.public_ip, 'domain' : eli.domain}
-                        un_eli.append(eli_info)
-        return render_template('elastic_ip.html',un_eli=un_eli,region=region)
+def app_route_elastic_ips(region=None):
+    un_eli = elastic_ips.unattached_elastic_ips(region=region)
+    return render_template('elastic_ip.html',un_eli=un_eli,region=region)
 
 @app.route('/aws/elastic_ips/<region>/delete/<ip>')
-def delete_elastic_ip(region=None,ip=None):
-        creds = config.get_ec2_conf()
-        conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
-        ip = ip.encode('ascii')
-        elis = conn.get_all_addresses(addresses=ip)
-
-        for eli in elis:
-                eli.release()
-        return redirect(url_for('elastic_ips', region=region))
+def app_route_delete_elastic_ip(region=None,ip=None):
+    elastic_ips.delete_unattached_elastic_ip(ip,region)
+    return redirect(url_for('app_route_elastic_ips', region=region))
 
 
 @app.route('/aws/instances/<region>/')
-def instance_list(region=None):
-    creds = config.get_ec2_conf()    
-    conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
-    instances = conn.get_all_instances()
-    instance_list = []
-    for instance in instances:
-        instance_id = instance.instances[0].__dict__['id']
-        instance_info = { 'instance_id' : instance_id }
-        if 'Name' in instance.instances[0].__dict__['tags']:
-            name = instance.instances[0].__dict__['tags']['Name']
-        else:
-            name = None
-        ip = instance.instances[0].__dict__['private_ip_address']
-        status = instance.instances[0].__dict__['_state']
-        instance_type = instance.instances[0].__dict__['instance_type']
-
-        instance_info['name'] = name
-        instance_info['ip'] = ip
-        instance_info['instance_type'] = instance_type
-        instance_info['status'] = status
-
-        
-        instance_list.append(instance_info)
+def app_route_instance_list(region=None):
+    instance_list = aws_instance.instance_list(region=region)
     return render_template('instances.html', instance_list=instance_list, region=region)
 
 @app.route('/aws/instances/<region>/delete/<hostname>')
-def delete_instances_node(region=None,hostname=None):
+def app_route_delete_instances_node(region=None,hostname=None):
     remove_instance(hostname=hostname)
-    return redirect(url_for('instance_list', region=region))
+    return redirect(url_for('app_route_instance_list', region=region))
 
 @app.route('/aws/instances/<region>/reboot/<instance_id>')
-def reboot_instance(region=None,instance_id=None):
-    creds = config.get_ec2_conf()   
-    conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
-    instance = conn.get_all_instances(instance_ids=instance_id.encode('ascii'))
-    instance[0].instances[0].reboot()
-    return redirect(url_for('instance_list', region=region))
+def app_route_reboot_instance(region=None,instance_id=None):
+    aws_instance.reboot_instance(region=region,instance_id=instance_id)
+    return redirect(url_for('app_route_instance_list', region=region))
 
 @app.route('/aws/instance_events/<region>/')
-def instance_events(region=None):
-        creds = config.get_ec2_conf()
-        conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
-        instances = conn.get_all_instance_status()
-        instance_event_list = []
-        for instance in instances:
-                event = instance.events
-                if event:
-                        i = conn.get_all_instances(instance_ids=instance.id.encode('ascii'))
-                        name = i[0].instances[0].__dict__['tags']['Name']
-                        event_info = { 'instance_id' : instance.id, 'name': name, 'event' : instance.events[0].code, 'description' : instance.events[0].description, 'event_before' : instance.events[0].not_before, 'event_after': instance.events[0].not_after }
-                        instance_event_list.append(event_info)
-        return render_template('instance_events.html', instance_event_list=instance_event_list, region=region)
+def app_route_instance_events(region=None):
+    instance_event_list = aws_instance.instance_events(region=region)
+    return render_template('instance_events.html', instance_event_list=instance_event_list, region=region)
 
 @app.route('/aws/instance_events/<region>/delete/<hostname>')
 def delete_instance_event_node(region=None,hostname=None):
     remove_instance(hostname=hostname)
-    return redirect(url_for('instance_events', region=region))
+    return redirect(url_for('app_route_instance_events', region=region))
 
 #### API ROUTES
 

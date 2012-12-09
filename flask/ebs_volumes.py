@@ -18,8 +18,7 @@ def ebs_volumes(region=None):
                 if state == None:
                         ebs_info = { 'id' : vol.id, 'size' : vol.size, 'iops' : vol.iops, 'status' : vol.status }
                         ebs_vol.append(ebs_info)
-        print ebs_vol
-        return { 'ebs_vol' : ebs_vol, 'region' : region }
+        return ebs_vol
 
 def delete_ebs_vol(region=None,vol_id=None):
         creds = config.get_ec2_conf()
