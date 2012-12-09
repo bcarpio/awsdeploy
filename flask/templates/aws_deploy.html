@@ -1,22 +1,48 @@
 {% include "header.html" ignore missing %}
 
 <div class="row-fluid">
-	<div class="span4 offset1" align="center"><span class="label label-info">Callable URLs</span>
+	<div class="span3 offset1" align="center">
+	<div class="alert alert-info">
+	<strong>Application Nodes</strong>
+    </div>
 	<p>
-	<table class="table table-striped">
-		<tr>
-		<td>URL</td><td><p class="text-info">/boston/node/deploy/az/appname/version/puppetClass/count/size</p></td>
-		</tr>
-		<tr>
-		<td>URL</td><td><p class="text-info">/boston/node/undeploy/hostname</p></td>
-		</tr>
-	</table>
+	<BR>
+	<button class="btn btn-success" type="button" style="width: 150px">Java Node</button>
+	<BR><BR>
+	<button class="btn btn-success" type="button" style="width: 150px">NodeJS Node</button>
+	<BR><BR>
+	<button class="btn btn-success" type="button" style="width: 150px">Nginx Node</button>
+	<BR><BR>
+	<button class="btn btn-success" type="button" style="width: 150px">Tomcat Node</button>
 	</div>
-    <div class="span4 offset1" align="center">
-	<span class="label label-info">Boston Datacenter</span></br>
+    <div class="span3" align="center">
+    <div class="alert alert-info">
+    <strong>Database Services</strong>
+    </div>
 	<p>
+    <BR>
+    <button class="btn btn-warning" type="button" style="width: 150px">MongoDB Cluster</button>
+    <BR><BR>
+    <button class="btn btn-warning" type="button" style="width: 150px">Cassandra Cluster</button>
+    <BR><BR>
+    <button class="btn btn-warning" type="button" style="width: 150px">Redis Cluster</button>
+    <BR><BR>
+    <button class="btn btn-warning" type="button" style="width: 150px">Rabbit Cluster</button>
+    <BR><BR>
+    <button class="btn btn-warning" type="button" style="width: 150px">Storm Cluster</button>
+	</div>
 
-	</div>
+    <div class="span3" align="center">
+    <div class="alert alert-info">
+    <strong>Load Balancers Services</strong>
+    </div>
+    <p>
+	<BR>
+	<button class="btn btn-info" type="button" style="width: 150px">Haproxy Load Balancer</button>
+    <BR><BR>
+
+    </div>
+
 </div>
 </body>
 </html>
