@@ -215,27 +215,38 @@ def remove_instance(hostname):
 
 @task
 def compare_ldap_to_ec2(region='us-east-1'):
+    creds = config.get_ec2_conf()
     with settings(
         hide('running', 'stdout')
     ):
         r=config.get_prod_east_conf()
+        conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
+        instances = conn.get_all_instances()
         with lcd(os.path.join(os.path.dirname(__file__),'.')):
             host_list = local("ldapsearch -x -w secret -D 'cn=admin,dc=social,dc=local' -b 'ou=hosts,dc=social,dc=local' -h 10.201.2.176   | grep cn: | awk '{print $2}' | grep -v default | grep -v '\-host'", capture=True).splitlines()
             for host in host_list:
-                instance = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-describe-instances --region %s --filter tag:Name=%s | tail -1 | awk '{print $5}'" %(region,host), capture=True)
-                if host != instance:
+                for instance in instances:
+                    if 'Name' in instance.instances[0].__dict__['tags']:
+                        instance_name = instance.instances[0].__dict__['tags']['Name']
+                        if host == instance_name:
+                            break
+                else:
                     print (red("Host:" + red(host) + " Not In EC2"))
-
 @task
-def compare_ec2_to_ldap():
+def compare_ec2_to_ldap(region='us-east-1'):
+    creds = config.get_ec2_conf()
     with settings(
         hide('running', 'stdout')
     ):
         r=config.get_prod_east_conf()
-        with lcd(os.path.join(os.path.dirname(__file__),'.')):
-            host_list = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-describe-instances --region us-east-1 | grep use1 | awk '{print $5}'", capture=True).splitlines()
-            for host in host_list:
-                instance = local("ldapsearch -x -w secret -D 'cn=admin,dc=social,dc=local' -b 'ou=hosts,dc=social,dc=local' -h 10.201.2.176 -LLL 'cn=%s' | grep cn: | awk '{print $2}'" %(host), capture=True)
-                if host != instance:
-                 print (red("Host:" + red(host) + " Not In LDAP"))
+        conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
+        instances = conn.get_all_instances() 
+        for instance in instances:
+            if 'Name' in instance.instances[0].__dict__['tags']:
+                name = instance.instances[0].__dict__['tags']['Name']
+            else:
+                name = None
+            host = local("ldapsearch -x -w secret -D 'cn=admin,dc=social,dc=local' -b 'ou=hosts,dc=social,dc=local' -h 10.201.2.176 -LLL 'cn=%s' | grep cn: | awk '{print $2}'" %(name), capture=True)
+            if host != name:
+                print (red("Host:" + red(name) + " Not In LDAP"))
 
