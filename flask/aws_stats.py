@@ -9,7 +9,7 @@ from awsdeploy import *
 import boto.ec2.elb
 
 def aws_stats():
-    aws_urls = ['/aws/node/deploy/az/appname/version/puppetClass/count/size','/aws/node/deploy/mongodb/az/app/shard','/aws/node/undeploy/hostname','/aws/node/az/pri/appname/ip', '/aws/node/az/pub/appname/hostname', '/aws/node/puppet/apply/node_name']
+    aws_urls = ['/aws/api/v1.0/node/deploy/az/appname/version/puppetClass/count/size','/aws/api/v1.0/node/deploy/mongodb/az/app/shard','/aws/api/v1.0/node/undeploy/hostname','/aws/api/v1.0/node/az/pri/appname/ip', '/aws/api/v1.0/node/az/pub/appname/hostname', '/aws/api/v1.0/node/puppet/apply/node_name']
 
     list = []
     creds = config.get_ec2_conf()

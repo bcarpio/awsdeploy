@@ -11,6 +11,7 @@ import aws_stats
 import ebs_volumes
 import elastic_ips
 import aws_instance
+import elastic_load_balancers
 
 app = Flask(__name__)
 
@@ -52,81 +53,99 @@ def app_route_aws_deploy():
 #### AWS Web EBS Volume Management 
 
 @app.route('/aws/ebs_volumes/<region>/')
-def app_route_ebs_volumes(region=None):
+def aws_app_route_ebs_volumes(region=None):
     ebs_vol = ebs_volumes.ebs_volumes(region=region)
     return render_template('ebs_volume.html',ebs_vol=ebs_vol,region=region)
 
 @app.route('/aws/ebs_volumes/<region>/delete/<vol_id>')
-def app_route_delete_ebs_vol(region=None,vol_id=None):
+def aws_app_route_delete_ebs_vol(region=None,vol_id=None):
     ebs_volumes.delete_ebs_vol(region=region,vol_id=vol_id) 
-    return redirect(url_for('app_route_ebs_volumes', region=region))
+    return redirect(url_for('aws_app_route_ebs_volumes', region=region))
+
+#### AWS Web Elastic IP Management 
 
 @app.route('/aws/elastic_ips/<region>/')
-def app_route_elastic_ips(region=None):
+def aws_app_route_elastic_ips(region=None):
     un_eli = elastic_ips.unattached_elastic_ips(region=region)
     return render_template('elastic_ip.html',un_eli=un_eli,region=region)
 
 @app.route('/aws/elastic_ips/<region>/delete/<ip>')
-def app_route_delete_elastic_ip(region=None,ip=None):
+def aws_app_route_delete_elastic_ip(region=None,ip=None):
     elastic_ips.delete_unattached_elastic_ip(ip,region)
-    return redirect(url_for('app_route_elastic_ips', region=region))
+    return redirect(url_for('aws_app_route_elastic_ips', region=region))
 
+
+#### AWS Web Instance Management
 
 @app.route('/aws/instances/<region>/')
-def app_route_instance_list(region=None):
+def aws_app_route_instance_list(region=None):
     instance_list = aws_instance.instance_list(region=region)
     return render_template('instances.html', instance_list=instance_list, region=region)
 
 @app.route('/aws/instances/<region>/delete/<hostname>')
-def app_route_delete_instances_node(region=None,hostname=None):
+def aws_app_route_delete_instances_node(region=None,hostname=None):
     remove_instance(hostname=hostname)
-    return redirect(url_for('app_route_instance_list', region=region))
+    return redirect(url_for('aws_app_route_instance_list', region=region))
 
 @app.route('/aws/instances/<region>/reboot/<instance_id>')
-def app_route_reboot_instance(region=None,instance_id=None):
+def aws_app_route_reboot_instance(region=None,instance_id=None):
     aws_instance.reboot_instance(region=region,instance_id=instance_id)
-    return redirect(url_for('app_route_instance_list', region=region))
+    return redirect(url_for('aws_app_route_instance_list', region=region))
 
 @app.route('/aws/instance_events/<region>/')
-def app_route_instance_events(region=None):
+def aws_app_route_instance_events(region=None):
     instance_event_list = aws_instance.instance_events(region=region)
     return render_template('instance_events.html', instance_event_list=instance_event_list, region=region)
 
 @app.route('/aws/instance_events/<region>/delete/<hostname>')
-def delete_instance_event_node(region=None,hostname=None):
+def aws_app_route_delete_instance_event_node(region=None,hostname=None):
     remove_instance(hostname=hostname)
-    return redirect(url_for('app_route_instance_events', region=region))
+    return redirect(url_for('aws_app_route_instance_events', region=region))
+
+#### Aws Elastic LB Management
+
+@app.route('/aws/elastic_load_balancers/<region>')
+def aws_app_route_elastic_load_balancers(region=None):
+    elbs = elastic_load_balancers.elastic_load_balacner_list(region=region)
+    return render_template('elastic_load_balancers.html', elbs=elbs, region=region)
+
+#### Aws Deployment Tasks
+
+@app.route('/aws/deploy/java')
+def aws_app_route_deploy_java():
+    return render_template('aws_deploy_java.html')
+    
 
 #### API ROUTES
 
 
-@app.route('/aws/node/<az>/<zone>/<appname>/ip')
-def ldapip(zone=None,az=None,appname=None):
+@app.route('/aws/api/v1.0/node/<az>/<zone>/<appname>/ip')
+def aws_api_route_ldapip(zone=None,az=None,appname=None):
 	mylist = host_list.ip_ldap_query(zone=zone,az=az,appname=appname)
 	return Response(json.dumps(mylist), mimetype='application/json')
 
-@app.route('/aws/node/<az>/<zone>/<appname>/hostname')
-def ldaphost(zone=None,az=None,appname=None):
+@app.route('/aws/api/v1.0/node/<az>/<zone>/<appname>/hostname')
+def aws_api_route_ldaphost(zone=None,az=None,appname=None):
 	mylist = host_list.host_ldap_query(zone=zone,az=az,appname=appname)
 	return Response(json.dumps(mylist), mimetype='application/json')
 
-@app.route('/aws/node/deploy/<az>/<appname>/<version>/<puppetClass>/<count>/<size>')
-def deploy_app_node(az=None,appname=None,version=None,count=None,puppetClass=None,size=None):
+@app.route('/aws/api/v1.0/node/deploy/<az>/<appname>/<version>/<puppetClass>/<count>/<size>')
+def aws_api_route_deploy_app_node(az=None,appname=None,version=None,count=None,puppetClass=None,size=None):
 	puppetClass = puppetClass.split('&')
 	dict = app_deploy_generic(appname=appname, version=version, az=az, count=count, puppetClass=puppetClass, size=size)
 	return Response(json.dumps(dict), mimetype='application/json')
 
-@app.route('/aws/node/undeploy/<hostname>')
-def undeploy_app_node(hostname=None):
+@app.route('/aws/api/v1.0/node/undeploy/<hostname>')
+def aws_api_route_undeploy_app_node(hostname=None):
 	dict = remove_instance(hostname=hostname)
 	return Response(json.dumps(dict), mimetype='application/json')
 
-@app.route('/aws/node/deploy/mongodb/<az>/<app>/<shard>')
-def deploy_mongodb(az=None,app=None,shard=None):
+@app.route('/aws/api/v1.0/node/deploy/mongodb/<az>/<app>/<shard>')
+def aws_api_route_deploy_mongodb(az=None,app=None,shard=None):
 	dict = deploy_five_node_mongodb_replica_set(az=az,shard=shard,app=app)
 
-@app.route('/aws/node/puppet/apply/<hostname>')
-def puppetapply(hostname=None):
+@app.route('/aws/api/v1.0/node/puppet/apply/<hostname>')
+def aws_api_rouet_puppetapply(hostname=None):
 	output = execute(puppet.puppetd_test, host=hostname)
 	return Response(json.dumps(output), mimetype='application/json')
 
