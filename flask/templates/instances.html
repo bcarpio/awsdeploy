@@ -11,7 +11,7 @@
 		<table class="table table-striped" id="simpleTable">
 		<thead>
 		<tr style="font-weight:bold">
-		<th data-sort="string">Name</th><th data-sort="string">Instance ID</th><th data-sort="string">IP</th><th data-sort="string">Size</th><th data-sort="string">Status</th><th>Reboot</th><th>Delete</th>
+		<th data-sort="string">Name</th><th data-sort="string">Instance ID</th><th data-sort="string">IP</th><th data-sort="string">Size</th><th data-sort="string">Status</th><th>Reize</th><th>Reboot</th><th>Delete</th>
 		</tr>
 		</thead>
 		<tbody>
@@ -27,10 +27,19 @@
 		{{instance['ip']}}
 		</td>
 		<td>
-		{{instance['instance_type']}}
+		<select id="select_size" size="1">
+		<option>{{instance['instance_type']}}</option>
+		<option value="m1.small">m1.small</option>
+		<option value="m1.medium">m1.medium</option>
+		<option value="m1.large">m1.large</option>
+		<option value="m1.xlarge">m1.xlarge</option>
+		</select>
 		</td>
 		<td>
 		{{instance['status']}}
+		</td>
+		<td>
+		<a id="aws_resize_link" href="/aws/instances/{{region}}/resize/{{instance['instance_id']}}/aws_instance_size"><button class="btn btn-warning btn-mini" type="button">Resize</button></a>  
 		</td>
 		<td>
 		<a href="/aws/instances/{{region}}/reboot/{{instance['instance_id']}}"><button class="btn btn-success btn-mini" type="button">Reboot</button></a>	

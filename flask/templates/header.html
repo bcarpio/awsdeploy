@@ -77,11 +77,13 @@ $.extend($.expr[":"],
         }
 });
 
+$('#select_size').change(function() {
+    var value = $(this).val();
+    var $link = $('#aws_resize_link');
+    
+    $link.attr('href', $link.attr('href').replace('aws_instance_size', value));
+});
     </script>
-
-	<script>
-	$('.dropdown-toggle').dropdown()
-	</script>
 
 
     <style type="text/css">
