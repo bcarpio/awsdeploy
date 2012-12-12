@@ -58,7 +58,13 @@
         <a href="/aws/elastic_ips/{{dict['region']}}"><button class="btn btn-mini btn-danger" type="button">{{dict['eli_count']}}</button></a>
         {% endif %}
         </td>
-        <td>{{dict['elb_count']}}</td>
+        <td>
+		{% if dict['out_of_service_elbs'] == 0 %}
+		<a href="/aws/elastic_load_balancers/{{dict['region']}}"><button class="btn btn-mini btn-primary" type="button">{{dict['elb_count']}}</button></a>
+		{% else %}
+		<a href="/aws/elastic_load_balancers/{{dict['region']}}"><button class="btn btn-mini btn-danger" type="button">{{dict['elb_count']}}</button></a>
+		{% endif %}
+		</td>
         </tr>
         </table>
 {% endfor %}

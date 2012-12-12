@@ -45,8 +45,15 @@ def aws_stats():
                 unattached_eli = unattached_eli + 1
 
         connelb = boto.ec2.elb.connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
-        elb = connelb.get_all_load_balancers()
-        elb_count = len(elb)
-        list.append({ 'region' : region, 'zones': zones, 'instance_count' : instance_count, 'ebscount' : ebscount, 'unattached_ebs' : unattached_ebs, 'eli_count' : eli_count, 'unattached_eli' : unattached_eli, 'elb_count' : elb_count, 'event_count' : event_count})
+        elbs = connelb.get_all_load_balancers()
+        elb_count = len(elbs)
+        out_of_service_elbs = 0
+        for elb in elbs:
+            inst_health = connelb.describe_instance_health(elb.name)
+            for inst_h in inst_health:
+                if inst_h.state != 'InService':
+                    out_of_service_elbs = out_of_service_elbs +1
+
+        list.append({ 'region' : region, 'zones': zones, 'instance_count' : instance_count, 'ebscount' : ebscount, 'unattached_ebs' : unattached_ebs, 'eli_count' : eli_count, 'unattached_eli' : unattached_eli, 'elb_count' : elb_count, 'event_count' : event_count, 'out_of_service_elbs' : out_of_service_elbs })
 
     return { 'list' : list, 'aws_urls' : aws_urls }
