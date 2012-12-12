@@ -27,7 +27,7 @@
 		{{instance['ip']}}
 		</td>
 		<td>
-		<select id="select_size" size="1">
+		<select class="select_size" size="1">
 		<option>{{instance['instance_type']}}</option>
 		<option value="m1.small">m1.small</option>
 		<option value="m1.medium">m1.medium</option>
@@ -39,13 +39,13 @@
 		{{instance['status']}}
 		</td>
 		<td>
-		<a id="aws_resize_link" href="/aws/instances/{{region}}/resize/{{instance['instance_id']}}/aws_instance_size"><button class="btn btn-warning btn-mini" type="button">Resize</button></a>  
+		<a class="aws_resize_link" href="/aws/instances/{{region}}/resize/{{instance['instance_id']}}/aws_instance_size"><button class="btn btn-warning btn-mini" type="button">Resize</button></a>  
 		</td>
 		<td>
-		<a href="/aws/instances/{{region}}/reboot/{{instance['instance_id']}}"><button class="btn btn-success btn-mini" type="button">Reboot</button></a>	
+		<a href="{{ url_for('aws_app_route_reboot_instance', region=region, instance_id=instance['instance_id'])}}"><button class="btn btn-success btn-mini" type="button">Reboot</button></a>	
 		</td>
 		<td>
-		<a href="/aws/instances/{{region}}/delete/{{instance['name']}}"><button class="btn btn-danger btn-mini" type="button">Delete</button></a>	
+		<a href="{{ url_for('aws_app_route_delete_instances_node', region=region, hostname=instance['name'])}}"><button class="btn btn-danger btn-mini" type="button">Delete</button></a>	
 		</td>
 		</tr>
 		{% endfor %}

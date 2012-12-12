@@ -30,7 +30,7 @@
 		{{instance_event['event_before']}}
 		</td>
 		<td>
-		<a href="/aws/instance_events/{{region}}/delete/{{instance_event['name']}}"><button class="btn btn-danger btn-mini" type="button">Delete</button></a>
+		<a href="{{ url_for('aws_app_route_delete_instance_event_node', region=region, hostname=instance_event['name'])}}"><button class="btn btn-danger btn-mini" type="button">Delete</button></a>
 		</tr>
 		{% endfor %}
 		</table>

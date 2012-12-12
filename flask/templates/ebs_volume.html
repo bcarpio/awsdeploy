@@ -23,7 +23,7 @@
 		{{vol['status']}}
 		</td>
 		<td>
-		<a href="/aws/ebs_volumes/{{region}}/delete/{{vol['id']}}"><button class="btn btn-danger btn-mini" type="button">Delete</button></a>
+		<a href="{{ url_for('aws_app_route_delete_ebs_vol', region=region, vol_id=vol['id'])}}"><button class="btn btn-danger btn-mini" type="button">Delete</button></a>
 		</td>
 		</tr>
 		{% endfor %}

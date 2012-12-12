@@ -56,16 +56,18 @@ def instance_events(region=None):
 
 
 def change_instance_type(region=None,instance_id=None,instanceType=None):
-    creds = config.get_ec2_conf()
-    conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
-    instance = conn.get_all_instances(instance_ids=instance_id.encode('ascii'))
-    instance[0].instances[0].stop()
-    status = instance[0].instances[0].state 
-    while status != 'stopped':
-        time.sleep(10)
+    aws_instance_types = ['m1.small', 'm1.medium', 'm1.large', 'm1.xlarge', 'm3.xlarge', 'm3.2xlarge', 'm2.xlarge', 'm2.2xlarge', 'm2.4xlarge', 'c1.medium', 'c1.xlarge']
+    if instanceType in aws_instance_types:
+        creds = config.get_ec2_conf()
+        conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
         instance = conn.get_all_instances(instance_ids=instance_id.encode('ascii'))
-        status = instance[0].instances[0].state
-    
-    conn.modify_instance_attribute(instance_id,'instanceType',instanceType)
-    instance = conn.get_all_instances(instance_ids=instance_id.encode('ascii'))
-    instance[0].instances[0].start()
+        instance[0].instances[0].stop()
+        status = instance[0].instances[0].state 
+        while status != 'stopped':
+            time.sleep(10)
+            instance = conn.get_all_instances(instance_ids=instance_id.encode('ascii'))
+            status = instance[0].instances[0].state
+        
+        conn.modify_instance_attribute(instance_id,'instanceType',instanceType)
+        instance = conn.get_all_instances(instance_ids=instance_id.encode('ascii'))
+        instance[0].instances[0].start()

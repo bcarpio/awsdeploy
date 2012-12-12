@@ -17,7 +17,7 @@
 		{{eli['domain']}}
 		</td>
 		<td>
-		<a href="/aws/elastic_ips/{{region}}/delete/{{eli['public_ip']}}"><button class="btn btn-danger btn-mini" type="button">Delete</button></a>
+		<a href="{{ url_for('aws_app_route_delete_elastic_ip', region=region, ip=eli['public_ip'])}}"><button class="btn btn-danger btn-mini" type="button">Delete</button></a>
 		</td>
 		</tr>
 		{% endfor %}

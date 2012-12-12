@@ -5,7 +5,7 @@
     <script type="text/javascript" src="/static/js/jquery.js"></script>
     <script type="text/javascript" src="/static/js/stupidtable.js?dev"></script>
     <script type="text/javascript" src="/static/js/bootstrap.js"></script>
-    <script type="text/javascript">
+    <script>
       $(function(){
           // Helper function to convert a string of the form "Mar 15, 1987" into
           // a Date object.
@@ -77,14 +77,15 @@ $.extend($.expr[":"],
         }
 });
 
-$('#select_size').change(function() {
-    var value = $(this).val();
-    var $link = $('#aws_resize_link');
-    
-    $link.attr('href', $link.attr('href').replace('aws_instance_size', value));
-});
-    </script>
-
+$('.select_size').on('change', function (evt) {
+    var size = $(this).val();
+    var link = $('.aws_resize_link', $(this).parent());
+    var parts = link.attr('href').split('/');
+    parts.pop();
+    parts.push(size);
+    link.attr('href', parts.join('/'));
+})
+</script>
 
     <style type="text/css">
       th[data-sort]{

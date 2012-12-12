@@ -38,16 +38,16 @@
         <tr>
         <td>
         {% if dict['event_count'] == 0 %}
-        <a href="/aws/instances/{{dict['region']}}"><button class="btn btn-mini btn-primary" type="button">{{dict['instance_count']}}</button></a>
+        <a href="{{ url_for('aws_app_route_instance_list', region=dict['region'])}}"><button class="btn btn-mini btn-primary" type="button">{{dict['instance_count']}}</button></a>
         {% else %}
-        <a href="/aws/instance_events/{{dict['region']}}"><button class="btn btn-mini btn-danger" type="button">{{dict['instance_count']}}</button></a>
+        <a href="{{ url_for('aws_app_route_instance_events', region=dict['region'])}}"><button class="btn btn-mini btn-danger" type="button">{{dict['instance_count']}}</button></a>
         {% endif %}
         </td>
         <td>
         {% if dict['unattached_ebs'] == 0 %}
         <button class="btn btn-mini btn-primary" type="button">{{dict['ebscount']}}</button>
         {% else %}
-        <a href="/aws/ebs_volumes/{{dict['region']}}"><button class="btn btn-mini btn-danger" type="button">{{dict['ebscount']}}</button></a>
+        <a href="{{ url_for('aws_app_route_ebs_volumes', region=dict['region'])}}"><button class="btn btn-mini btn-danger" type="button">{{dict['ebscount']}}</button></a>
         {% endif %}
         </td>
 
@@ -55,14 +55,14 @@
         {% if dict['unattached_eli'] == 0 %}
         <button class="btn btn-mini btn-primary" type="button">{{dict['eli_count']}}</button>
         {% else %}
-        <a href="/aws/elastic_ips/{{dict['region']}}"><button class="btn btn-mini btn-danger" type="button">{{dict['eli_count']}}</button></a>
+        <a href="{{ url_for('aws_app_route_elastic_ips', region=dict['region'])}}"><button class="btn btn-mini btn-danger" type="button">{{dict['eli_count']}}</button></a>
         {% endif %}
         </td>
         <td>
 		{% if dict['out_of_service_elbs'] == 0 %}
-		<a href="/aws/elastic_load_balancers/{{dict['region']}}"><button class="btn btn-mini btn-primary" type="button">{{dict['elb_count']}}</button></a>
+		<a href="{{ url_for('aws_app_route_elastic_load_balancers', region=dict['region'])}}"><button class="btn btn-mini btn-primary" type="button">{{dict['elb_count']}}</button></a>
 		{% else %}
-		<a href="/aws/elastic_load_balancers/{{dict['region']}}"><button class="btn btn-mini btn-danger" type="button">{{dict['elb_count']}}</button></a>
+		<a href="{{ url_for('aws_app_route_elastic_load_balancers', region=dict['region'])}}"><button class="btn btn-mini btn-danger" type="button">{{dict['elb_count']}}</button></a>
 		{% endif %}
 		</td>
         </tr>
