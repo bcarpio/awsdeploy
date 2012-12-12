@@ -11,6 +11,16 @@
 		<strong>{{elb['name']}}</strong>
 		</td>
 		</tr>
+		<tr>
+		<td colspan="3">
+		<strong>DNS Name: </strong>{{elb['dns_name']}}
+		</td>
+		</tr>
+		<tr>
+		<td colspan="3">
+		{{elb['health_check']}}
+		</td>
+		</tr>
 		{% for node in elb['attached_instance_health'] %}
 
 		{% if node['health'] == 'InService' %}

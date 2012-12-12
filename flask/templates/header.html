@@ -79,7 +79,7 @@ $.extend($.expr[":"],
 
 $('.select_size').on('change', function (evt) {
     var size = $(this).val();
-    var link = $('.aws_resize_link', $(this).parent());
+    var link = $('.aws_resize_link', $(this).parents().eq(1));
     var parts = link.attr('href').split('/');
     parts.pop();
     parts.push(size);

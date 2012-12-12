@@ -23,7 +23,10 @@ def elastic_load_balacner_list(region):
             instance_id = instance.instance_id
             instance_health_dict = { 'health' : health, 'instance_id' : instance_id }
             instance_health_list.append(instance_health_dict)
-        elb_info = { 'name' : elb.name, 'attached_instance_health' : instance_health_list }
+        dns_name = elb.dns_name
+        health_check = elb.health_check
+        listeners = elb.listeners
+        elb_info = { 'name' : elb.name, 'attached_instance_health' : instance_health_list, 'dns_name' : dns_name , 'health_check' : health_check, 'listeners' : listeners}
         elbs_info.append(elb_info)
     inst_conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
     instance_name = inst_conn.get_all_instances()
