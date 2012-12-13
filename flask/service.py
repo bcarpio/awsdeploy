@@ -12,6 +12,7 @@ import ebs_volumes
 import elastic_ips
 import aws_instance
 import elastic_load_balancers
+import puppet_enc
 
 app = Flask(__name__)
 
@@ -120,7 +121,13 @@ def aws_app_route_elastic_load_balancers(region=None):
 @app.route('/aws/deploy/java')
 def aws_app_route_deploy_java():
     return render_template('aws_deploy_java.html')
-    
+
+#### Puppet ENC
+
+@app.route('/aws/puppet_enc/<region>')
+def aws_app_route_puppet_enc(region=None):
+    nodes = puppet_enc.puppet_enc(region=region)
+    return render_template('puppet_enc.html',nodes=nodes)
 
 #### API ROUTES
 

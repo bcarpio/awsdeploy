@@ -72,3 +72,14 @@ def get_ec2_conf():
 def region_list():
     region_list = ['us-east-1', 'us-west-2','us-west-1']
     return region_list
+
+def puppet_enc(region):
+    database = 'instances'
+    collection = 'puppet_enc'
+    if region == 'us-west-1':
+        host = ['10.52.201.38','10.52.201.29','10.52.201.123','10.52.201.101']
+    if region == 'us-west-2':
+        host = ['10.252.2.51','10.252.4.29','10.252.6.84']
+    if region == 'us-east-1':
+        host = ['10.201.2.112','10.201.4.103','10.201.6.17']
+    return {'database' : database, 'collection' : collection, 'host' : host}
