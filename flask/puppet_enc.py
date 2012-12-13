@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # vim: set expandtab:
-import sys
-sys.path.append('../')
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__),'../'))
 from awsdeploy import config
 from pymongo import Connection
 
