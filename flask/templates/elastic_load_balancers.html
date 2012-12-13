@@ -13,12 +13,19 @@
 		</tr>
 		<tr>
 		<td colspan="3">
-		<strong>DNS Name: </strong>{{elb['dns_name']}}
+		DNS Name: {{elb['dns_name']}}
 		</td>
 		</tr>
 		<tr>
 		<td colspan="3">
 		{{elb['health_check']}}
+		</td>
+		</tr>
+		<tr>
+		<td colspan="3">Subnets: 
+		{% for ip in elb['subnet_ips'] %}
+		{{ip}} &nbsp;&nbsp;&nbsp;
+		{% endfor %}
 		</td>
 		</tr>
 		{% for node in elb['attached_instance_health'] %}
