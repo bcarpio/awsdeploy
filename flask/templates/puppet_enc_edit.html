@@ -6,18 +6,80 @@
 	<strong>Puppet ENC - Edit</strong>
     </div>
 	<p>
-	<BR>
-	<button class="btn btn-success" type="button" style="width: 150px">{{node}}</button>
+	<button class="btn btn-success" type="button" style="width: 300px">{{node_info['node']}}</button>
 	</div>
-    <div class="span3" align="center">
+	
+    <div class="span2" align="center">
     <div class="alert alert-info">
-    <strong>Puppet Options</strong>
+    <strong>Puppet Classes</strong>
     </div>
     <p>
-    <BR>
+    	 
+    	<table class="table">
+    		<tbody>
+			{% for class in node_info['enc']['classes'] %}	
+			<tr>
+				<td>{{class}}</td><td><a href='#'><i class="icon-remove" onClick="$(this).closest('tr').remove();"></i></a></td>
+			</tr>
+		{% endfor %}
+			<tr>
+    			<td colspan="2" style="text-align: center;">
+    				<a class="update_puppet_classes" href="#"><button class="btn btn-info" type="button">Update</button></a>
+    			</td>
+    		</tr>
+			</tbody>
+		</table>
+		
+	</div>
 	
-	
+	<div class="span3">
+    <div class="alert alert-info" align="center">
+    <strong>Puppet Paramaters</strong>
     </div>
+    <p>
+    	{% if 'parameters' in node_info['enc'] %}
+    	<table class="table">
+    		<tbody>
+    		
+    		{% for key, value in node_info['enc']['parameters'].iteritems() %}
+    		<tr>
+    			<td>
+    			{{key}}
+    			</td>
+    			<td>
+    			{{value}}
+    			</td>
+    			<td>
+    				<a href='#'><i class="icon-remove" onClick="$(this).closest('tr').remove();"></i></a>
+    				
+    			</td>
+    		</tr>
+    	{% endfor %}
+    	
+    		<tr>
+    			<td colspan="2" style="text-align: center;">
+    				<a class="update_puppet_paramaters" href="#"><button class="btn btn-info" type="button">Update</button></a>
+    			</td>
+    		</tr>
+    		</tbody>
+    	</table>
+    	{% endif %}
+    	
+ 
+   </div>
+ 
+	<div class="span2" align="center">
+    <div class="alert alert-info">
+	<strong>Inherit</strong>
+	</div>
+	<p>{% if 'inherit' in node_info %}
+		<table class="table">
+			<tbody>
+				<tr><td>{{node_info['inherit']}}</td></tr>
+			</tbody>
+		</table>
+		{% endif %}
+	</p>
 
 </div>
 </body>

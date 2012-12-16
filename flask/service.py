@@ -127,7 +127,19 @@ def aws_app_route_deploy_java():
 @app.route('/aws/puppet_enc/<region>')
 def aws_app_route_puppet_enc(region=None):
     nodes = puppet_enc.puppet_enc(region=region)
-    return render_template('puppet_enc.html',nodes=nodes)
+    return render_template('puppet_enc.html',nodes=nodes,region=region)
+
+@app.route('/aws/puppet_enc/<region>/edit/<node>')
+def aws_app_route_puppet_enc_edit_node(region=None,node=None):
+    node_info = puppet_enc.puppet_node_info(region=region,node=node)
+    return render_template('puppet_enc_edit.html',region=region,node_info=node_info)
+
+@app.route('/aws/puppet_enc/<region>/edit/classes/<puppetClasses>/<node>')
+def aws_app_route_puppet_enc_change_classes(region=None,puppetClasses=None,node=None):
+    classes = puppetClasses.split('&')
+    puppet_enc.puppet_node_update_classes(region=region,node=node,classes=classes)
+    return redirect(url_for('aws_app_route_puppet_enc_edit_node', region=region, node=node))
+    
 
 #### API ROUTES
 

@@ -85,7 +85,8 @@ $(document).delegate('.select_size','change', function (evt) {
     parts.push(size);
     link.attr('href', parts.join('/'));
 })
-</script>
+$(this).closest('tr').remove();
+	</script>
 
     <style type="text/css">
       th[data-sort]{
