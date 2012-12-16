@@ -4,7 +4,7 @@ from flask import Flask, flash, abort, redirect, url_for, request, render_templa
 from fabric.api import *
 from fabric.operations import local,put
 import os, sys
-sys.path.append(os.path.join(os.path.dirname(__file__),'../'))
+sys.path.append(os.path.join(os.path.dirname(__file__),'../../'))
 from awsdeploy import *
 import boto.ec2.elb
 import aws_stats
@@ -13,8 +13,7 @@ import elastic_ips
 import aws_instance
 import elastic_load_balancers
 import puppet_enc
-
-app = Flask(__name__)
+from nibiru import app
 
 #### Home Page
 
