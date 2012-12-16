@@ -19,7 +19,7 @@ def instance_list(region):
         if 'Name' in instance.instances[0].__dict__['tags']:
             name = instance.instances[0].__dict__['tags']['Name']
         else:
-            name = None
+            name = 'NO-TAG'
         ip = instance.instances[0].__dict__['private_ip_address']
         status = instance.instances[0].__dict__['_state']
         instance_type = instance.instances[0].__dict__['instance_type']
