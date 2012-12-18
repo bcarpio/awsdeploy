@@ -35,6 +35,7 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subn
     creds = config.get_ec2_conf()
     if "." in name:
         print (red("PROBLEM: Do Not Use Periods In Names"))
+    mongod.mongodb_enc_check(region,name)
     ldap_check(ldaphost,basedn,name)
     template = open(os.path.join(os.path.dirname(__file__),'../templates/user-data.template')).read()
     user_data = template.replace('HOSTNAME',name).replace('DOMAIN',domain).replace('PUPPETMASTER',puppetmaster)
@@ -56,7 +57,7 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subn
     ldap_add(ldaphost,admin,basedn,secret,name,ip)
     update_dns(name,ip)
     ec2conn.create_tags([rid], {'Name': name})
-    #execute(add_node_to_mongodb_enc,name,host=puppetmaster)
+    execute(puppet.add_node_to_mongodb_enc,name,host=puppetmaster)
     print (blue("SUCCESS: Node '%s' Deployed To %s")%(name,region))
     return {'ip': ip, 'rid' : rid}
 
@@ -218,31 +219,10 @@ def ldap_add(ldaphost,admin,basedn,secret,name,ip):
     ldapinit.add_s(dn,ldif)
     ldapinit.unbind_s()
 
-def ldap_modify(hostname,puppetClass,az):
-    r=config.get_conf(az)
-    ldapinit = ldap.initialize('ldap://'+r.ldap)
-    ldapinit.simple_bind_s(r.admin+r.basedn,r.secret)
-    dn='cn='+hostname+',ou=hosts,'+r.basedn
-    puppetClass = puppetClass.encode('ascii')
-    mod_attrs = [( ldap.MOD_ADD, 'puppetClass', puppetClass)]
-    ldapinit.modify_s(dn, mod_attrs)
-
-###
-# This Updates Mongodb With The Right Puppet Classes
-###
-def add_puppetClasses_to_mongodb_enc(hostname,puppetClass):
-    sudo('/opt/mongodb-enc/scripts/add_node.py -a append -n %s -c %s' %(hostname,puppetClass))
-
-###
-# This adds the node to mongodb enc
-###
-def add_node_to_mongodb_enc(hostname):
-    sudo('/opt/mongodb-enc/scripts/add_node.py -a new -i default -n %s' %(hostname))
-
 ### 
 # This the generic application deployment task
 ###
-def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', size='m1.small'):
+def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', size='m1.small', dmz='pri'):
     r=config.get_conf(az)
     authinfo = config.auth()
     env.user = authinfo['user']
@@ -258,9 +238,7 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
         hide('running', 'stdout')
     ):
         while total < count:
-            num = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=%s-pri-%s-%s-* | grep cn: | awk '{print $2}' | awk -F- '{print $5}' | tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,az,appname,version), capture=True)
-            if not num:
-                num = 0
+            num = mongod.mongodb_app_count(r.region,az,appname,version,dmz)
             num = int(num) + 1
             num = "%02d" % num
             name = az+'-pri-'+appname+'-'+version+'-'+num
@@ -287,13 +265,11 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
             total = int(total) + 1
 
         for host in hostnamelist:
-                if isinstance(puppetClass, basestring):
-                    ldap_modify(hostname=host, puppetClass=puppetClass, az=az)
-                #    execute(add_puppetClasses_to_mongodb_enc,hostname=host,puppetClass=puppetClass,hosts=r.puppetmaster)
-                else:
-                    for pclass in puppetClass:
-                        ldap_modify(hostname=host, puppetClass=pclass, az=az)
-                #        execute(add_puppetClasses_to_mongodb_enc,hostname=host,puppetClass=puppetClass,hosts=r.puppetmaster)
+            if isinstance(puppetClass, basestring):
+                execute(puppet.add_puppetClasses_to_mongodb_enc,hostname=host,puppetClass=puppetClass,host=r.puppetmaster)
+            else:
+                for pclass in puppetClass:
+                    execute(puppet.add_puppetClasses_to_mongodb_enc,hostname=host,puppetClass=pclass,host=r.puppetmaster)
 
         time.sleep(120)
 
@@ -315,7 +291,6 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
                 status = total + s
             time.sleep(10)
             runs += 1
-    cleanup()
     return iplist
 
 ####
@@ -323,16 +298,11 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
 ####
 
 def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='pri'):
-    cleanup()
     r=config.get_conf(az)
     authinfo = config.auth()
     env.user = authinfo['user']
     env.key_filename = authinfo['key_filename']
-    last = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=%s-%s-%s-* | grep cn: | tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,az,dmz,appname), capture=True)
-    if last:
-        num = last[-2:]
-    else:
-        num = 0
+    num = mongod.mongodb_third_count(r.region,az,appname)
     num = int(num) + 1
     num = "%02d" % num
     name= az+'-'+dmz+'-'+appname+'-'+num
@@ -367,27 +337,11 @@ def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='p
         print "ERROR: Wrong dmz specified"
 
     if isinstance(puppetClass, basestring):
-        ldap_modify(hostname=name, puppetClass=puppetClass, az=az)
-    #    execute(add_puppetClasses_to_mongodb_enc,hostname=name,puppetClass=puppetClass,host=r.puppetmaster)
+        execute(puppet.add_puppetClasses_to_mongodb_enc,hostname=name,puppetClass=puppetClass,host=r.puppetmaster)
     else:
         for pclass in puppetClass:
-            ldap_modify(hostname=name, puppetClass=pclass, az=az)
-    #        execute(add_puppetClasses_to_mongodb_enc,hostname=name,puppetClass=puppetClass,host=r.puppetmaster)
-    cleanup() 
+            execute(puppet.add_puppetClasses_to_mongodb_enc,hostname=name,puppetClass=pclass,host=r.puppetmaster)
     return ip_rid
-
-###
-# This cleans up after instance creation
-###
-
-def cleanup():
-    with settings(
-        hide('running', 'stdout', 'warnings', 'stderr')
-    ):
-        with lcd(os.path.join(os.path.dirname(__file__),'.')):
-            env.warn_only = True
-            local('rm ../tmp/hostname.out')
-            local('rm ../tmp/ip.out')
 
 
 ####
@@ -631,8 +585,8 @@ def deploy_three_nodes_with_2_ebs_volumes_raid_0(az,appname,puppetClass,iops='no
 def deploy_five_node_mongodb_replica_set(az, shard='1', setname='mongo', app='sl'):
     env.warn_only = False
     r=config.get_conf(az)
-    shardnum = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=%s-pri-%s-mongodb-s%s* | grep cn: | awk '{print $2}' | awk -F- '{print $5}'| tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,az,app,shard), capture=True)
-    if shardnum:
+    result = mongod.mongodb_shardnum(r.region,az,shard,app)
+    if result:
         print (red("PROBLEM: Shard '%s' Already Exists")%(shard))
         sys.exit(0)
     appname = app+'-mongodb-s'+shard
@@ -645,8 +599,8 @@ def deploy_five_node_mongodb_replica_set(az, shard='1', setname='mongo', app='sl
 def deploy_three_node_mongodb_replica_set(az, shard='1', setname='mongo', app='inf'):
     env.warn_only = False
     r=config.get_conf(az)
-    shardnum = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=%s-pri-%s-mongodb-s%s* | grep cn: | awk '{print $2}' | awk -F- '{print $5}'| tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,az,app,shard), capture=True)
-    if shardnum:
+    result = mongod.mongodb_shardnum(r.region,az,shard,app)
+    if result:
         print (red("PROBLEM: Shard '%s' Already Exists")%(shard))
         sys.exit(0)
     appname = app+'-mongodb-s'+shard

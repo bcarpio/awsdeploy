@@ -35,3 +35,9 @@ def puppet_fix_ssl():
 	sudo('rm -rf /var/lib/puppet/ssl/*')
 	sudo('puppet agent -t')
 	sudo('service puppet start')
+
+def add_puppetClasses_to_mongodb_enc(hostname,puppetClass):
+    sudo('/opt/mongodb-enc/scripts/add_node.py -a append -n %s -c %s' %(hostname,puppetClass))
+
+def add_node_to_mongodb_enc(hostname):
+    sudo('/opt/mongodb-enc/scripts/add_node.py -a new -i default -n %s' %(hostname))
