@@ -1,0 +1,45 @@
+{% include "header.html" ignore missing %}
+
+<div class="row-fluid">
+    <div class="span4 offset4" align="center">
+	<span class="label label-info">Elastic Load Balancers</span></br>
+	<p align="center">
+		<table class="table table-hover">
+		{% for elb in elbs %}
+		<tr class="success">
+		<td colspan="3">
+		<strong>{{elb['name']}}</strong>
+		</td>
+		</tr>
+		<tr>
+		<td colspan="3">
+		DNS Name: {{elb['dns_name']}}
+		</td>
+		</tr>
+		<tr>
+		<td colspan="3">
+		{{elb['health_check']}}
+		</td>
+		</tr>
+		<tr>
+		<td colspan="3">Subnets: 
+		{% for ip in elb['subnet_ips'] %}
+		{{ip}} &nbsp;&nbsp;&nbsp;
+		{% endfor %}
+		</td>
+		</tr>
+		{% for node in elb['attached_instance_health'] %}
+
+		{% if node['health'] == 'InService' %}
+		<tr><td>{{node['instance_name']}}</td><td>{{node['instance_id']}}</td><td>{{node['health']}}</td></tr>
+		{% else %}
+		<tr class="error"><td>{{node['instance_name']}}</td><td>{{node['instance_id']}}</td><td>{{node['health']}}</td></tr> 
+		{% endif %}
+
+		{% endfor %}
+		{% endfor %}
+		</table>
+	</div>
+</div>
+</body>
+</html>

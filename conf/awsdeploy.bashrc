@@ -1,4 +1,3 @@
-export EC2_HOME=../ec2-api-tools
 export AWSDEPLOYPATH=../conf/
 export EC2_KEYPAIR=awsdeploy_key
 export EC2_URL=https://ec2.us-west-1.amazonaws.com

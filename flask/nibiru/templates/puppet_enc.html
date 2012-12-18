@@ -1,0 +1,43 @@
+
+{% include "header.html" ignore missing %}
+
+<div class="row-fluid">
+    <div class="span9 offset1" align="center">
+	<span class="label label-info">Puppet ENC</span></br>
+	<p align="left">
+		<span class="label label-info">Search:</span> <input type="text" id="kwd_search" class="input-medium search-query" value=""/>
+	</p>
+	<p>
+		<table class="table table-striped" id="simpleTable">
+		<thead>
+		<tr style="font-weight:bold">
+		<th data-sort="string" width="40%">Name</th><th data-sort="string">Classes</th><th data-sort="string">Inherit</th><th>Update</th>
+		</tr>
+		</thead>
+		<tbody>
+		{% for node in nodes %}
+		<tr>
+		<td>
+		{{node['node']}}
+		</td>
+		<td>
+		<ul class="inline">
+		{% for class in node['enc']['classes'] %}	
+		<li>{{class}}</li>	
+		{% endfor %}
+		</ul>
+		</td>
+		<td>
+		{{node['inherit']}}
+		</td>
+		<td>
+		<a href="/aws/puppet_enc/{{region}}/edit/{{node['node']}}"><button class="btn btn-success btn-mini" type="button">Edit</button></a>	
+		</td>
+		</tr>
+		{% endfor %}
+		</tbody>
+		</table>
+	</div>
+</div>
+</body>
+</html>

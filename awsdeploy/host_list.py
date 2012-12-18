@@ -226,8 +226,8 @@ def restart_harbor():
 	sudo('start spindrift-harbor')
 
 @task
-def change_dev_puppet():
-	sudo('sed s/^10.52.74.38.*/"10.52.201.74    dev-pri-puppet-01.ecollegeqa.net  dev-pri-puppet-01 puppet"/g -i /etc/hosts')
-	sudo('rm -rf /var/lib/puppet/ssl/*')
+def logrotate():
 	env.warn_only = True
 	sudo('puppet agent -t')
+	sudo('/etc/cron.daily/logrotate')
+

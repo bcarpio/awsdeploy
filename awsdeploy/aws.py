@@ -35,6 +35,7 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subn
     creds = config.get_ec2_conf()
     if "." in name:
         print (red("PROBLEM: Do Not Use Periods In Names"))
+    mongod.mongodb_enc_check(region,name)
     ldap_check(ldaphost,basedn,name)
     template = open(os.path.join(os.path.dirname(__file__),'../templates/user-data.template')).read()
     user_data = template.replace('HOSTNAME',name).replace('DOMAIN',domain).replace('PUPPETMASTER',puppetmaster)
@@ -56,7 +57,7 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subn
     ldap_add(ldaphost,admin,basedn,secret,name,ip)
     update_dns(name,ip)
     ec2conn.create_tags([rid], {'Name': name})
-    #execute(add_node_to_mongodb_enc,name,host=puppetmaster)
+    execute(puppet.add_node_to_mongodb_enc,name,host=puppetmaster)
     print (blue("SUCCESS: Node '%s' Deployed To %s")%(name,region))
     return {'ip': ip, 'rid' : rid}
 
@@ -156,13 +157,16 @@ def attach_ebs_volume(device, ebs_vol, rid, region):
 ####
 
 def allocate_elastic_ip(region='us-east-1'):
-    with lcd(os.path.join(os.path.dirname(__file__),'.')):
-        allocid = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-allocate-address -d vpc --region %s | awk '{print $4}'" %(region), capture=True)
+    creds = config.get_ec2_conf()
+    ec2conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY']) 
+    allocid = ec2conn.allocate_address(domain='vpc')
+    allocid = allocid.allocation_id
     return allocid
 
 def associate_elastic_ip(elasticip, instance, region='us-east-1'):
-    with lcd(os.path.join(os.path.dirname(__file__),'.')):
-        local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-associate-address -a %s -i %s --region %s' %(elasticip, instance, region))
+    creds = config.get_ec2_conf()
+    ec2conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
+    ec2conn.associate_address(instance_id=instance,allocation_id=elasticip,public_ip=None)
 
 
 #### 
@@ -215,31 +219,10 @@ def ldap_add(ldaphost,admin,basedn,secret,name,ip):
     ldapinit.add_s(dn,ldif)
     ldapinit.unbind_s()
 
-def ldap_modify(hostname,puppetClass,az):
-    r=config.get_conf(az)
-    ldapinit = ldap.initialize('ldap://'+r.ldap)
-    ldapinit.simple_bind_s(r.admin+r.basedn,r.secret)
-    dn='cn='+hostname+',ou=hosts,'+r.basedn
-    puppetClass = puppetClass.encode('ascii')
-    mod_attrs = [( ldap.MOD_ADD, 'puppetClass', puppetClass)]
-    ldapinit.modify_s(dn, mod_attrs)
-
-###
-# This Updates Mongodb With The Right Puppet Classes
-###
-def add_puppetClasses_to_mongodb_enc(hostname,puppetClass):
-    sudo('/opt/mongodb-enc/scripts/add_node.py -a append -n %s -c %s' %(hostname,puppetClass))
-
-###
-# This adds the node to mongodb enc
-###
-def add_node_to_mongodb_enc(hostname):
-    sudo('/opt/mongodb-enc/scripts/add_node.py -a new -i default -n %s' %(hostname))
-
 ### 
 # This the generic application deployment task
 ###
-def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', size='m1.small'):
+def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', size='m1.small', dmz='pri'):
     r=config.get_conf(az)
     authinfo = config.auth()
     env.user = authinfo['user']
@@ -255,9 +238,7 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
         hide('running', 'stdout')
     ):
         while total < count:
-            num = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=%s-pri-%s-%s-* | grep cn: | awk '{print $2}' | awk -F- '{print $5}' | tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,az,appname,version), capture=True)
-            if not num:
-                num = 0
+            num = mongod.mongodb_app_count(r.region,az,appname,version,dmz)
             num = int(num) + 1
             num = "%02d" % num
             name = az+'-pri-'+appname+'-'+version+'-'+num
@@ -284,13 +265,11 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
             total = int(total) + 1
 
         for host in hostnamelist:
-                if isinstance(puppetClass, basestring):
-                    ldap_modify(hostname=host, puppetClass=puppetClass, az=az)
-                #    execute(add_puppetClasses_to_mongodb_enc,hostname=host,puppetClass=puppetClass,hosts=r.puppetmaster)
-                else:
-                    for pclass in puppetClass:
-                        ldap_modify(hostname=host, puppetClass=pclass, az=az)
-                #        execute(add_puppetClasses_to_mongodb_enc,hostname=host,puppetClass=puppetClass,hosts=r.puppetmaster)
+            if isinstance(puppetClass, basestring):
+                execute(puppet.add_puppetClasses_to_mongodb_enc,hostname=host,puppetClass=puppetClass,host=r.puppetmaster)
+            else:
+                for pclass in puppetClass:
+                    execute(puppet.add_puppetClasses_to_mongodb_enc,hostname=host,puppetClass=pclass,host=r.puppetmaster)
 
         time.sleep(120)
 
@@ -312,7 +291,6 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
                 status = total + s
             time.sleep(10)
             runs += 1
-    cleanup()
     return iplist
 
 ####
@@ -320,16 +298,11 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
 ####
 
 def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='pri'):
-    cleanup()
     r=config.get_conf(az)
     authinfo = config.auth()
     env.user = authinfo['user']
     env.key_filename = authinfo['key_filename']
-    last = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=%s-%s-%s-* | grep cn: | tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,az,dmz,appname), capture=True)
-    if last:
-        num = last[-2:]
-    else:
-        num = 0
+    num = mongod.mongodb_third_count(r.region,az,appname)
     num = int(num) + 1
     num = "%02d" % num
     name= az+'-'+dmz+'-'+appname+'-'+num
@@ -364,27 +337,11 @@ def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='p
         print "ERROR: Wrong dmz specified"
 
     if isinstance(puppetClass, basestring):
-        ldap_modify(hostname=name, puppetClass=puppetClass, az=az)
-    #    execute(add_puppetClasses_to_mongodb_enc,hostname=name,puppetClass=puppetClass,host=r.puppetmaster)
+        execute(puppet.add_puppetClasses_to_mongodb_enc,hostname=name,puppetClass=puppetClass,host=r.puppetmaster)
     else:
         for pclass in puppetClass:
-            ldap_modify(hostname=name, puppetClass=pclass, az=az)
-    #        execute(add_puppetClasses_to_mongodb_enc,hostname=name,puppetClass=puppetClass,host=r.puppetmaster)
-    cleanup() 
+            execute(puppet.add_puppetClasses_to_mongodb_enc,hostname=name,puppetClass=pclass,host=r.puppetmaster)
     return ip_rid
-
-###
-# This cleans up after instance creation
-###
-
-def cleanup():
-    with settings(
-        hide('running', 'stdout', 'warnings', 'stderr')
-    ):
-        with lcd(os.path.join(os.path.dirname(__file__),'.')):
-            env.warn_only = True
-            local('rm ../tmp/hostname.out')
-            local('rm ../tmp/ip.out')
 
 
 ####
@@ -393,32 +350,44 @@ def cleanup():
 
 def remove_prod_pqa_ec2_instance(name, az):
     r=config.get_conf(az)
+    creds = config.get_ec2_conf()
     authinfo = config.auth()
     env.user = authinfo['user']
     env.key_filename = authinfo['key_filename']
     env.warn_only = True
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
-        instance = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-describe-instances --region %s --filter tag:Name=%s | grep -v terminated | grep INSTANCE | awk '{print $2}'" %(r.region,name), capture=True)
         local('zabbix_api/remove_host.py %s %s' %(r.zserver,name))
         local('/usr/bin/ldapdelete -x -w %s -D "cn=admin,dc=social,dc=local" -h %s cn=%s,ou=hosts,dc=social,dc=local' %(r.secret,r.ldap,name))
         execute(puppet.puppetca_clean,name+'.social.local',host=r.puppetmaster)
         ip = local("host "+name+".asskickery.us | awk '{print $4}'", capture=True)
         local('. ../conf/awsdeploy.bashrc; /usr/local/bin/route53 del_record Z4512UDZ56AKC '+name+'.asskickery.us. A '+ip)
-        local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-terminate-instances --region %s %s' %(r.region,instance))
+    ec2conn = connect_to_region(r.region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
+    instances = ec2conn.get_all_instances(filters={'tag:Name' : name})
+    for instance in instances:
+        instance_id = instance.instances[0].id
+        list = []
+        list.append(instance_id)
+        ec2conn.terminate_instances(instance_ids=list)
 
 def remove_west_ec2_instance(name, region='us-west-1'):
     r=config.get_devqa_west_conf()
+    creds = config.get_ec2_conf()
     authinfo = config.auth()
     env.user = authinfo['user']
     env.key_filename = authinfo['key_filename']
     env.warn_only = True
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
-        instance = local(". ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-describe-instances --region %s --filter tag:Name=%s | grep -v terminated | grep INSTANCE | awk '{print $2}'" %(region,name), capture=True)
         local('/usr/bin/ldapdelete -x -w %s -D "cn=admin,dc=manhattan,dc=dev" -h %s cn=%s,ou=hosts,dc=manhattan,dc=dev' %(r.secret,r.ldap,name))
         execute(puppet.puppetca_clean,name+'.ecollegeqa.net',host=r.puppetmaster)
         ip = local("host "+name+".asskickery.us | awk '{print $4}'", capture=True)
         local('. ../conf/awsdeploy.bashrc; /usr/local/bin/route53 del_record Z4512UDZ56AKC '+name+'.asskickery.us. A '+ip)
-        local('. ../conf/awsdeploy.bashrc; ../ec2-api-tools/bin/ec2-terminate-instances --region %s %s' %(region,instance))
+    ec2conn = connect_to_region(r.region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
+    instances = ec2conn.get_all_instances(filters={'tag:Name' : name})
+    for instance in instances:
+        instance_id = instance.instances[0].id
+        list = []  
+        list.append(instance_id)
+        ec2conn.terminate_instances(instance_ids=list)
 
 ####
 # File System Related tasks
@@ -532,7 +501,7 @@ def setup_rabbit_lvm():
     sudo('chown -R rabbitmq:rabbitmq /data/')
     sudo('service rabbitmq-server stop')
     sudo('rm -rf /var/lib/rabbitmq/')
-    sudo('ln -s ln -s /data/ /var/lib/rabbitmq')
+    sudo('ln -s /data/ /var/lib/rabbitmq')
     sudo('service rabbitmq-server start')
 
 ####
@@ -553,7 +522,7 @@ def deploy_one_node_with_10_ebs_io_volumes_raid_0(az,appname,puppetClass,iops='y
     execute(setup_ten_drive_mirror, host=ip)
     return ip
 
-def deploy_five_nodes_with_4_ebs_volumes_raid_0(az,appname,puppetClass,size='m1.xlarge'):
+def deploy_five_nodes_with_4_ebs_volumes_raid_0(az,appname,puppetClass,iops='no',capacity='100',size='m1.xlarge'):
     r=config.get_conf(az)
     iplist = []
     if az in ['use1a', 'use1c', 'use1d']:
@@ -564,7 +533,7 @@ def deploy_five_nodes_with_4_ebs_volumes_raid_0(az,appname,puppetClass,size='m1.
             iplist.append(ip) 
             time.sleep(120)
             for lun in ['/dev/sdf', '/dev/sdg', '/dev/sdh', '/dev/sdi']:
-                ebs_vol = create_ebs_volume(az=azloop)
+                ebs_vol = create_ebs_volume(az=azloop,iops=iops,size=capacity)
                 attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
     if az in ['usw2a', 'usw2b', 'usw2c']:
         for azloop in ['usw2a', 'usw2a', 'usw2b', 'usw2b', 'usw2c']:
@@ -574,7 +543,7 @@ def deploy_five_nodes_with_4_ebs_volumes_raid_0(az,appname,puppetClass,size='m1.
             iplist.append(ip)
             time.sleep(120)
             for lun in ['/dev/sdf', '/dev/sdg', '/dev/sdh', '/dev/sdi']:
-                ebs_vol = create_ebs_volume(az=azloop)
+                ebs_vol = create_ebs_volume(az=azloop,iops=iops,size=capacity)
                 attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
     time.sleep(300)
     env.parallel = True
@@ -616,8 +585,8 @@ def deploy_three_nodes_with_2_ebs_volumes_raid_0(az,appname,puppetClass,iops='no
 def deploy_five_node_mongodb_replica_set(az, shard='1', setname='mongo', app='sl'):
     env.warn_only = False
     r=config.get_conf(az)
-    shardnum = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=%s-pri-%s-mongodb-s%s* | grep cn: | awk '{print $2}' | awk -F- '{print $5}'| tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,az,app,shard), capture=True)
-    if shardnum:
+    result = mongod.mongodb_shardnum(r.region,az,shard,app)
+    if result:
         print (red("PROBLEM: Shard '%s' Already Exists")%(shard))
         sys.exit(0)
     appname = app+'-mongodb-s'+shard
@@ -630,8 +599,8 @@ def deploy_five_node_mongodb_replica_set(az, shard='1', setname='mongo', app='sl
 def deploy_three_node_mongodb_replica_set(az, shard='1', setname='mongo', app='inf'):
     env.warn_only = False
     r=config.get_conf(az)
-    shardnum = local("/usr/bin/ldapsearch -x -w %s -D %s%s -b %s -h %s -LLL cn=%s-pri-%s-mongodb-s%s* | grep cn: | awk '{print $2}' | awk -F- '{print $5}'| tail -1" %(r.secret,r.admin,r.basedn,r.basedn,r.ldap,az,app,shard), capture=True)
-    if shardnum:
+    result = mongod.mongodb_shardnum(r.region,az,shard,app)
+    if result:
         print (red("PROBLEM: Shard '%s' Already Exists")%(shard))
         sys.exit(0)
     appname = app+'-mongodb-s'+shard

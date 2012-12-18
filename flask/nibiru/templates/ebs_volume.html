@@ -1,0 +1,34 @@
+{% include "header.html" ignore missing %}
+
+<div class="row-fluid">
+    <div class="span4 offset1" align="center">
+	<span class="label label-info">Unassociated EBS Volumes</span></br>
+	<p>
+		<table class="table table-striped">
+		<tr style="font-weight:bold">
+		<td>EBS Volume ID</td><td>Size</td><td>IOPs</td><td>Status</td><td>Delete</td>
+		</tr>
+		{% for vol in ebs_vol %}
+		<tr>
+		<td>
+		{{vol['id']}}
+		</td>
+		<td>
+		{{vol['size']}}G
+		</td>
+		<td>
+		{{vol['iops']}}
+		</td>
+		<td>
+		{{vol['status']}}
+		</td>
+		<td>
+		<a href="{{ url_for('aws_app_route_delete_ebs_vol', region=region, vol_id=vol['id'])}}"><button class="btn btn-danger btn-mini" type="button">Delete</button></a>
+		</td>
+		</tr>
+		{% endfor %}
+		</table>
+	</div>
+</div>
+</body>
+</html>

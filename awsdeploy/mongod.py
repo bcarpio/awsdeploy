@@ -4,6 +4,7 @@ from fabric.api import *
 from fabric.operations import local,put
 from fabric.colors import *
 from pymongo import *
+import config
 import sys
 import os
 import time
@@ -62,3 +63,56 @@ def restart():
     Usage: fab -H <mongodb_host> mongod.restart"""
     stop()
     start()
+
+def mongodb_enc_check(region,name):
+    puppet_config = config.puppet_enc(region)
+    database = puppet_config['database']
+    collection = puppet_config['collection']
+    host = puppet_config['host']
+    con = Connection(host)
+    col = con[database][collection]
+    ck_node = col.find_one({ 'node' : name })
+    if ck_node:
+        print (red("PROBLEM: Node "+name+" Already In MongoDB"))
+        sys.exit(1)
+
+def mongodb_app_count(region,az,appname,version,dmz):
+    puppet_config = config.puppet_enc(region)
+    database = puppet_config['database']
+    collection = puppet_config['collection']
+    host = puppet_config['host']
+    con = Connection(host)
+    col = con[database][collection]
+    nodes = nodes = col.find({ 'node' : { '$regex' : '^'+az+'-'+dmz+'-'+appname+'-'+version+'-.*'}})
+    num = 0
+    for node in nodes:
+        if node:
+            node = node['node'].split('.')[0]
+            num = node.split('-')[4]
+    return num
+
+def mongodb_third_count(region,az,appname,dmz):
+    puppet_config = config.puppet_enc(region)
+    database = puppet_config['database']
+    collection = puppet_config['collection']
+    host = puppet_config['host']
+    con = Connection(host)
+    col = con[database][collection]
+    nodes = col.find({ 'node' : { '$regex' : '^'+az+'-'+dmz+'-'+appname+'-.*'}})
+    num = 0
+    for node in nodes:
+        if node:
+            node = node['node'].split('.')[0]
+            num = node.split('-')[3]
+    return num
+
+def mongodb_shardnum(region,az,shard,app):
+    puppet_config = config.puppet_enc(region)
+    database = puppet_config['database']
+    collection = puppet_config['collection']
+    host = puppet_config['host']
+    con = Connection(host)
+    col = con[database][collection]
+    shard = str(shard) 
+    node = col.find_one({ 'node' : { '$regex' : '^'+az+'-pri-'+app+'-mongodb-s'+shard+'.*'}})
+    return node
