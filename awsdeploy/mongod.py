@@ -116,3 +116,22 @@ def mongodb_shardnum(region,az,shard,app):
     shard = str(shard) 
     node = col.find_one({ 'node' : { '$regex' : '^'+az+'-pri-'+app+'-mongodb-s'+shard+'.*'}})
     return node
+
+def add_meta_data(region,name,instance_info):
+    puppet_config = config.puppet_enc(region)
+    database = puppet_config['database']
+    collection = puppet_config['meta_collection']
+    host = puppet_config['host']
+    con = Connection(host)
+    col = con[database][collection]
+    d = {}
+    d['node'] = name
+    d['instance_id'] = instance_info.instances[0].id
+    d['ip_addr'] = instance_info.instances[0].private_ip_address
+    d['architecture'] = instance_info.instances[0].architecture
+    d['ami'] = instance_info.instances[0].image_id
+    d['size'] = instance_info.instances[0].__dict__['instance_type']
+    d['deploy_time'] = instance_info.instances[0].__dict__['launch_time']
+    d['root_device_type'] = instance_info.instances[0].__dict__['root_device_type']
+    d['subnet_id'] = instance_info.instances[0].__dict__['subnet_id']
+    col.insert(d)

@@ -58,6 +58,7 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subn
     update_dns(name,ip)
     ec2conn.create_tags([rid], {'Name': name})
     execute(puppet.add_node_to_mongodb_enc,name,host=puppetmaster)
+    mongod.add_meta_data(region,name,instance_info)
     print (blue("SUCCESS: Node '%s' Deployed To %s")%(name,region))
     return {'ip': ip, 'rid' : rid}
 
