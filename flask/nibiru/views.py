@@ -80,8 +80,6 @@ def aws_app_route_delete_elastic_ip(region=None,ip=None):
 @app.route('/aws/instances/<region>/')
 def aws_app_route_instance_list(region=None):
     instance_list = aws_instance.instance_list(region=region)
-    for instance in instance_list:
-        print instance['name']    
     return render_template('instances.html', instance_list=instance_list, region=region)
 
 @app.route('/aws/instances/<region>/delete/<hostname>')

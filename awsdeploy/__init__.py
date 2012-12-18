@@ -14,6 +14,7 @@ import mongod
 import cassandra
 import hadoop
 from aws import *
+from pymongo import Connection
 
 ####
 #  Cheetah Deployment
@@ -249,4 +250,3 @@ def compare_ec2_to_ldap(region='us-east-1'):
             host = local("ldapsearch -x -w secret -D 'cn=admin,dc=social,dc=local' -b 'ou=hosts,dc=social,dc=local' -h 10.201.2.176 -LLL 'cn=%s' | grep cn: | awk '{print $2}'" %(name), capture=True)
             if host != name:
                 print (red("Host:" + red(name) + " Not In LDAP"))
-
