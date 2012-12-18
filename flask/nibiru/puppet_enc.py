@@ -25,6 +25,16 @@ def puppet_node_info(region,node):
     node = col.find_one({'node' : node})
     return node
 
+def meta_data(region,node):
+    puppet_config = config.puppet_enc(region)
+    database = puppet_config['database']
+    collection = puppet_config['meta_collection']
+    host = puppet_config['host']
+    con = Connection(host)
+    col = con[database][collection]
+    node = col.find_one({'node' : node})
+    return node
+
 def puppet_node_update_classes(region,node,classes):
     puppet_config = config.puppet_enc(region)
     database = puppet_config['database']

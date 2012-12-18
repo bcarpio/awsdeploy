@@ -131,7 +131,8 @@ def aws_app_route_puppet_enc(region=None):
 @app.route('/aws/puppet_enc/<region>/edit/<node>')
 def aws_app_route_puppet_enc_edit_node(region=None,node=None):
     node_info = puppet_enc.puppet_node_info(region=region,node=node)
-    return render_template('puppet_enc_edit.html',region=region,node_info=node_info)
+    node_meta_data = puppet_enc.meta_data(region=region,node=node)
+    return render_template('puppet_enc_edit.html',region=region,node_info=node_info,node_meta_data=node_meta_data)
 
 @app.route('/aws/puppet_enc/<region>/edit/classes/<puppetClasses>/<node>')
 def aws_app_route_puppet_enc_change_classes(region=None,puppetClasses=None,node=None):
