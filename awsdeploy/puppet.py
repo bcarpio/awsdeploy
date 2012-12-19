@@ -10,9 +10,8 @@ def puppetd_test():
 	env.warn_only = True
 	env.user = 'ubuntu'
 	output = sudo('puppet agent -t')
-	print output
 	return output
-
+	
 @task
 def puppetca_list():
 	""" Runs puppetca --list """

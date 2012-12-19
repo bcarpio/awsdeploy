@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # vim: set expandtab:
-from flask import Flask, flash, abort, redirect, url_for, request, render_template, make_response, json, Response
+from flask import Flask, flash, abort, redirect, url_for, request, render_template, make_response, json, Response, stream_with_context
 from fabric.api import *
 from fabric.operations import local,put
 import os, sys
@@ -139,7 +139,13 @@ def aws_app_route_puppet_enc_change_classes(region=None,puppetClasses=None,node=
     classes = puppetClasses.split('&')
     puppet_enc.puppet_node_update_classes(region=region,node=node,classes=classes)
     return redirect(url_for('aws_app_route_puppet_enc_edit_node', region=region, node=node))
-    
+ 
+@app.route('/aws/puppet_enc/apply/<ip>')
+def aws_api_route_puppet_apply(ip=None):
+    output = execute(puppet.puppetd_test, host=ip)
+    output = output.values()
+    output = '\n'.join(output)
+    return render_template('output.html',output=output)
 
 #### API ROUTES
 

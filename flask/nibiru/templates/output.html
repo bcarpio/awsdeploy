@@ -1,0 +1,21 @@
+
+{% include "header.html" ignore missing %}
+
+<div class="row-fluid">
+    <div class="span9 offset1" align="center">
+	<span class="label label-info">Output</span></br>
+	<p>
+        <table class="table">
+        <tr>
+        <td>
+        <pre>
+        {{output}}
+        </pre>
+        </td>
+        </tr>
+        </table>
+       <FORM><INPUT Type="button" class="btn btn-success" VALUE="Back" onClick="history.go(-1);return true;"></FORM>
+	</div>
+</div>
+</body>
+</html>
