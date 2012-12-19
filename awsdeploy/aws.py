@@ -225,9 +225,6 @@ def ldap_add(ldaphost,admin,basedn,secret,name,ip):
 ###
 def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', size='m1.small', dmz='pri'):
     r=config.get_conf(az)
-    authinfo = config.auth()
-    env.user = authinfo['user']
-    env.key_filename = authinfo['key_filename']
     version = version.replace('.','x')
     if os.path.exists('../tmp/ip.out'):
         local('rm ../tmp/ip.out')
@@ -300,9 +297,6 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
 
 def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='pri'):
     r=config.get_conf(az)
-    authinfo = config.auth()
-    env.user = authinfo['user']
-    env.key_filename = authinfo['key_filename']
     num = mongod.mongodb_third_count(r.region,az,appname)
     num = int(num) + 1
     num = "%02d" % num
@@ -352,9 +346,6 @@ def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='p
 def remove_prod_pqa_ec2_instance(name, az):
     r=config.get_conf(az)
     creds = config.get_ec2_conf()
-    authinfo = config.auth()
-    env.user = authinfo['user']
-    env.key_filename = authinfo['key_filename']
     env.warn_only = True
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
         local('zabbix_api/remove_host.py %s %s' %(r.zserver,name))
@@ -373,9 +364,6 @@ def remove_prod_pqa_ec2_instance(name, az):
 def remove_west_ec2_instance(name, region='us-west-1'):
     r=config.get_devqa_west_conf()
     creds = config.get_ec2_conf()
-    authinfo = config.auth()
-    env.user = authinfo['user']
-    env.key_filename = authinfo['key_filename']
     env.warn_only = True
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
         local('/usr/bin/ldapdelete -x -w %s -D "cn=admin,dc=manhattan,dc=dev" -h %s cn=%s,ou=hosts,dc=manhattan,dc=dev' %(r.secret,r.ldap,name))

@@ -16,6 +16,10 @@ import hadoop
 from aws import *
 from pymongo import Connection
 
+authinfo = config.auth()
+env.user = authinfo['user']
+env.key_filename = authinfo['key_filename']
+
 ####
 #  Cheetah Deployment
 ####
