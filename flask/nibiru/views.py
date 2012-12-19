@@ -132,8 +132,6 @@ def aws_app_route_puppet_enc(region=None):
 def aws_app_route_puppet_enc_edit_node(region=None,node=None):
     node_info = puppet_enc.puppet_node_info(region=region,node=node)
     node_meta_data = puppet_enc.meta_data(region=region,node=node)
-    print node_meta_data
-    print node_info
     return render_template('puppet_enc_edit.html',region=region,node_info=node_info,node_meta_data=node_meta_data)
 
 @app.route('/aws/puppet_enc/<region>/edit/classes/<puppetClasses>/<node>')
@@ -144,11 +142,10 @@ def aws_app_route_puppet_enc_change_classes(region=None,puppetClasses=None,node=
  
 @app.route('/aws/puppet_enc/apply/<ip>')
 def aws_api_route_puppet_apply(ip=None):
-    def generate():
-        task = execute(puppet.puppetd_test, host=ip)
-        for row in task.values():
-            yield row + '\n'
-    return Response(generate(), mimetype='text/plain')
+    output = execute(puppet.puppetd_test, host=ip)
+    output = output.values()
+    output = '\n'.join(output)
+    return render_template('output.html',output=output)
 
 #### API ROUTES
 
