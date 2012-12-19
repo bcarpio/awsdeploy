@@ -18,7 +18,7 @@
 		{% for instance in instance_list %}
 		<tr>
 		<td>
-		{{instance['name']}}
+		<a href="{{ url_for('aws_app_route_puppet_enc_edit_node', region=region,node=instance['name'])}}">{{instance['name']}}</a>
 		</td>
 		<td>
 		{{instance['instance_id']}}

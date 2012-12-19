@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # vim: set expandtab:
-from flask import Flask, flash, abort, redirect, url_for, request, render_template, make_response, json, Response
+from flask import Flask, flash, abort, redirect, url_for, request, render_template, make_response, json, Response, stream_with_context
 from fabric.api import *
 from fabric.operations import local,put
 import os, sys
@@ -132,6 +132,8 @@ def aws_app_route_puppet_enc(region=None):
 def aws_app_route_puppet_enc_edit_node(region=None,node=None):
     node_info = puppet_enc.puppet_node_info(region=region,node=node)
     node_meta_data = puppet_enc.meta_data(region=region,node=node)
+    print node_meta_data
+    print node_info
     return render_template('puppet_enc_edit.html',region=region,node_info=node_info,node_meta_data=node_meta_data)
 
 @app.route('/aws/puppet_enc/<region>/edit/classes/<puppetClasses>/<node>')
@@ -139,7 +141,14 @@ def aws_app_route_puppet_enc_change_classes(region=None,puppetClasses=None,node=
     classes = puppetClasses.split('&')
     puppet_enc.puppet_node_update_classes(region=region,node=node,classes=classes)
     return redirect(url_for('aws_app_route_puppet_enc_edit_node', region=region, node=node))
-    
+ 
+@app.route('/aws/puppet_enc/apply/<ip>')
+def aws_api_route_puppet_apply(ip=None):
+    def generate():
+        task = execute(puppet.puppetd_test, host=ip)
+        for row in task.values():
+            yield row + '\n'
+    return Response(generate(), mimetype='text/plain')
 
 #### API ROUTES
 

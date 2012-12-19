@@ -31,7 +31,7 @@
 		{{node['inherit']}}
 		</td>
 		<td>
-		<a href="/aws/puppet_enc/{{region}}/edit/{{node['node']}}"><button class="btn btn-success btn-mini" type="button">Edit</button></a>	
+		<a href="{{ url_for('aws_app_route_puppet_enc_edit_node', region=region,node=node['node'])}}"><button class="btn btn-success btn-mini" type="button">Edit</button></a>	
 		</td>
 		</tr>
 		{% endfor %}
