@@ -191,7 +191,7 @@ def get_aws_deployment_status():
         hide('running', 'stdout')
     ):
         env.warn_only = True
-        status = sudo('ls -al /home/appuser/finished > /dev/null 2>&1; echo $?')
+        status = run('ls -al /var/tmp/finished > /dev/null 2>&1; echo $?')
         return status
 
 ###
