@@ -104,6 +104,11 @@ def aws_app_route_delete_instance_event_node(region=None,hostname=None):
     remove_instance(hostname=hostname)
     return redirect(url_for('aws_app_route_instance_events', region=region))
 
+@app.route('/aws/instance_events/<region>/stop_start/<instance_id>')
+def aws_app_route_stop_start_instance(region=None,instance_id=None):
+    aws_instance.aws_stop_start_instance(region=region,instance_id=instance_id)
+    return redirect(url_for('aws_app_route_instance_events', region=region))
+
 @app.route('/aws/instances/<region>/resize/<instance_id>/<instanceType>')
 def aws_app_route_reize_instance(region=None,instance_id=None,instanceType=None):
     aws_instance.change_instance_type(region=region,instance_id=instance_id,instanceType=instanceType)
