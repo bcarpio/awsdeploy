@@ -71,3 +71,16 @@ def change_instance_type(region=None,instance_id=None,instanceType=None):
         conn.modify_instance_attribute(instance_id,'instanceType',instanceType)
         instance = conn.get_all_instances(instance_ids=instance_id.encode('ascii'))
         instance[0].instances[0].start()
+        
+def aws_stop_start_instance(region=None,instance_id=None):
+    creds = config.get_ec2_conf()
+    conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
+    instance = conn.get_all_instances(instance_ids=instance_id.encode('ascii'))
+    instance[0].instances[0].stop()
+    status = instance[0].instances[0].state 
+    while status != 'stopped':
+        time.sleep(10)
+        instance = conn.get_all_instances(instance_ids=instance_id.encode('ascii'))
+        status = instance[0].instances[0].state
+    instance = conn.get_all_instances(instance_ids=instance_id.encode('ascii'))
+    instance[0].instances[0].start()

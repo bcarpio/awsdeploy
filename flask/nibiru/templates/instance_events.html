@@ -7,15 +7,12 @@
 	<p>
 		<table class="table table-striped">
 		<tr style="font-weight:bold">
-		<td>Name</td><td>Instance ID</td><td>Event</td><td>Description</td><td>Event Before</td><td>Event After</td><td>Delete</td>
+		<td>Name</td><td>Event</td><td>Description</td><td>Event Before</td><td>Event After</td><td>Stop / Start</td><td>Delete</td>
 		</tr>
 		{% for instance_event in instance_event_list %}
 		<tr>
 		<td>
 		{{instance_event['name']}}
-		</td>
-		<td>
-		{{instance_event['instance_id']}}
 		</td>
 		<td>
 		{{instance_event['event']}}
@@ -28,6 +25,9 @@
 		</td>
 		<td>
 		{{instance_event['event_before']}}
+		</td>
+		<td>
+		<a href="{{ url_for('aws_app_route_stop_start_instance', region=region, instance_id=instance_event['instance_id'])}}"><button class="btn btn-warning btn-mini" type="button">Stop / Start</button></a>
 		</td>
 		<td>
 		<a href="{{ url_for('aws_app_route_delete_instance_event_node', region=region, hostname=instance_event['name'])}}"><button class="btn btn-danger btn-mini" type="button">Delete</button></a>
