@@ -21,7 +21,7 @@
     <strong>Puppet Classes</strong>
     </div>
     <p>
-    	 
+    	 {% if 'classes' in node_info ['enc'] %}
     	<table class="table">
     		<tbody>
 			{% for class in node_info['enc']['classes'] %}	
@@ -36,7 +36,7 @@
     		</tr>
 			</tbody>
 		</table>
-		
+		{% endif %}
 	</div>
 	
 	<div class="span3">

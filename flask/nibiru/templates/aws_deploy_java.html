@@ -15,8 +15,61 @@
     </div>
     <p>
     <BR>
+    	{% from "_formhelpers.html" import render_field %}
+		<form method=post action="/aws/deploy/java">
+		  <table class="table">
+		    {{ render_field(form.appname) }}
+		    {{ render_field(form.version) }}
+		    {{ render_field(form.count) }}
+		    {{ render_field(form.az) }}
+		    {{ render_field(form.size) }}
+		   <tr>
+		   	<td colspan="2"><center><input type=submit class="btn btn-info btn-small" style="width: 150px" value="Deploy"></center></td>
+		   </tr>
+		  </table>
+ 		      				
 	
+</form>
 	
+    			
+					
+	
+    </div>
+   <div class="span3" align="center">
+    <div class="alert alert-info">
+    <strong>Manage Java Versions</strong>
+    </div>
+    <p>
+    <BR>
+    	<table class="table">
+    		<tr>
+    			<td colspan="3">
+    				<center>
+    				1.6.0_16
+    				</center>
+    			</td>
+    		</tr>
+    		<tr>
+    			<td colspan="3">
+    				<center>
+    				1.7.0_03
+    				</center>
+    			</td>
+    		</tr>
+    		<tr>
+    			<td><strong>Upload:</strong></td>
+    			<td><input type="text" name="upload_java"</td>
+    			<td><a class="file_browse" href="#"><button class="btn btn-info btn-small" type="button">Browse</button></a></td>
+    		</tr>
+    		<tr>
+    			<td colspan="3">
+    				<center>
+    				<a class="upload_java" href="#"><button class="btn btn-warning btn-small" type="button" style="width: 150px">Upload</button></a>
+    				</center>
+    			</td>
+    		</tr>
+    	</table>
+    	
     </div>
 
 </div>
