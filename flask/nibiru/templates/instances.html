@@ -29,10 +29,9 @@
 		<td>
 		<select class="select_size" size="1">
 		<option>{{instance['instance_type']}}</option>
-		<option value="m1.small">m1.small</option>
-		<option value="m1.medium">m1.medium</option>
-		<option value="m1.large">m1.large</option>
-		<option value="m1.xlarge">m1.xlarge</option>
+		{% for size in aws_instance_types %}
+		<option value="{{size}}">{{size}}</option>
+		{% endfor %}
 		</select>
 		</td>
 		<td>

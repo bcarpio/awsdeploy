@@ -13,6 +13,7 @@ import elastic_ips
 import aws_instance
 import elastic_load_balancers
 import puppet_enc
+import forms
 from nibiru import app
 
 #### Home Page
@@ -79,8 +80,9 @@ def aws_app_route_delete_elastic_ip(region=None,ip=None):
 
 @app.route('/aws/instances/<region>/')
 def aws_app_route_instance_list(region=None):
+    aws_instance_types = config.aws_instance_types()
     instance_list = aws_instance.instance_list(region=region)
-    return render_template('instances.html', instance_list=instance_list, region=region)
+    return render_template('instances.html', instance_list=instance_list, region=region, aws_instance_types=aws_instance_types)
 
 @app.route('/aws/instances/<region>/delete/<hostname>')
 def aws_app_route_delete_instances_node(region=None,hostname=None):
@@ -117,9 +119,25 @@ def aws_app_route_elastic_load_balancers(region=None):
 
 #### Aws Deployment Tasks
 
-@app.route('/aws/deploy/java')
+@app.route('/aws/deploy/result/<list>')
+def aws_app_route_deploy_result(list=None):
+    list = list.split(',')
+    return render_template('deploy_result.html', list=list)
+
+@app.route('/aws/deploy/java', methods=['GET', 'POST'])
 def aws_app_route_deploy_java():
-    return render_template('aws_deploy_java.html')
+    form = forms.java_deployment(request.form)
+    if request.method == 'POST' and form.validate():
+        appname = form.appname.data
+        version = form.version.data
+        count = form.count.data
+        size = form.size.data
+        az = form.az.data
+        list = app_deploy_generic(appname=appname, version=version, az=az, count=count, puppetClass=('java','nodejs'), size=size, dmz='pri')
+        list = ",".join(list)
+        return redirect(url_for('aws_app_route_deploy_result', list=list))
+    return render_template('aws_deploy_java.html', form=form)
+
 
 #### Puppet ENC
 

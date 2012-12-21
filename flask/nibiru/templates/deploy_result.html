@@ -1,0 +1,14 @@
+{% include "header.html" ignore missing %}
+
+<div class="row-fluid">
+	<div class="span6 offset3" align="center"><span class="label label-info">Result</span>
+	<p>
+	<table class="table table-striped">
+        {% for ip in list %}
+		<tr><td><center>{{ip}}</center></td></tr>
+        {% endfor %}
+	</table>
+	</div>
+</div>
+</body>
+</html>
