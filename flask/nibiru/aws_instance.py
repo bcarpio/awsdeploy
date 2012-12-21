@@ -84,3 +84,4 @@ def aws_stop_start_instance(region=None,instance_id=None):
         status = instance[0].instances[0].state
     instance = conn.get_all_instances(instance_ids=instance_id.encode('ascii'))
     instance[0].instances[0].start()
+
