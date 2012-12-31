@@ -1,5 +1,7 @@
 {% include "header.html" ignore missing %}
 
+<form method=post action="/aws/puppet_enc/us-west-2/edit/{{node_meta_data['node']}}">
+
 <div class="row-fluid">
 	<div class="span3 offset1" align="center">
 	<div class="alert alert-info">
@@ -9,6 +11,8 @@
 	<button class="btn btn-success" type="button" style="width: 300px">{{node_meta_data['node']}}</button>
     <BR><BR>
     {% if node_info %}
+    <input type=submit class="btn btn-info" style="width: 300px" value="Update">
+    <BR><BR>
     <a href="{{ url_for('aws_api_route_puppet_apply', ip=node_meta_data['ip_addr'])}}">
     	<button class="btn btn-warning" type="button" style="width: 300px">Puppet Apply</button>
     </a>
@@ -21,19 +25,16 @@
     <strong>Puppet Classes</strong>
     </div>
     <p>
-    	 {% if 'classes' in node_info ['enc'] %}
+    	 
+    	 {% if 'classes' in node_info['enc'] %}
     	<table class="table">
     		<tbody>
 			{% for class in node_info['enc']['classes'] %}	
 			<tr>
-				<td>{{class}}</td><td><a href='#'><i class="icon-remove" onClick="$(this).closest('tr').remove();"></i></a></td>
+				<td><input type="hidden" name="puppet_classes" value="{{class}}">{{class}}</td><td><a href='#'><i class="icon-remove" onClick="$(this).closest('tr').remove();"></i></a></td>
 			</tr>
 		{% endfor %}
-			<tr>
-    			<td colspan="2" style="text-align: center;">
-    				<a class="update_puppet_classes" href="#"><button class="btn btn-info" type="button">Update</button></a>
-    			</td>
-    		</tr>
+
 			</tbody>
 		</table>
 		{% endif %}
@@ -49,6 +50,7 @@
     		<tbody>
     		
     		{% for key, value in node_info['enc']['parameters'].iteritems() %}
+    		<input type="hidden" name="puppet_paramaters" value="{{key}}={{value}}">
     		<tr>
     			<td>
     			{{key}}
@@ -63,16 +65,12 @@
     		</tr>
     	{% endfor %}
     	
-    		<tr>
-    			<td colspan="2" style="text-align: center;">
-    				<a class="update_puppet_paramaters" href="#"><button class="btn btn-info" type="button">Update</button></a>
-    			</td>
-    		</tr>
+    	
     		</tbody>
     	</table>
     	{% endif %}
     	
- 
+ 		
    </div>
  	{% endif %}
 	<div class="span2" align="center">
@@ -119,5 +117,6 @@
 	</p>
 
 </div>
+</form>
 </body>
 </html>
