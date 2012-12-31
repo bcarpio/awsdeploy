@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # vim: set expandtab:
-from flask import Flask, flash, abort, redirect, url_for, request, render_template, make_response, json, Response, stream_with_context
+from flask import Flask, flash, abort, redirect, url_for, request, render_template, make_response, json, Response, stream_with_context, escape
+from werkzeug.datastructures import ImmutableMultiDict
 from fabric.api import *
 from fabric.operations import local,put
 import os, sys
@@ -151,17 +152,33 @@ def aws_app_route_puppet_enc(region=None):
     nodes = puppet_enc.puppet_enc(region=region)
     return render_template('puppet_enc.html',nodes=nodes,region=region)
 
-@app.route('/aws/puppet_enc/<region>/edit/<node>')
+@app.route('/aws/puppet_enc/<region>/edit/<node>', methods=['GET','POST'])
 def aws_app_route_puppet_enc_edit_node(region=None,node=None):
     node_info = puppet_enc.puppet_node_info(region=region,node=node)
     node_meta_data = puppet_enc.meta_data(region=region,node=node)
-    return render_template('puppet_enc_edit.html',region=region,node_info=node_info,node_meta_data=node_meta_data)
-
-@app.route('/aws/puppet_enc/<region>/edit/classes/<puppetClasses>/<node>')
-def aws_app_route_puppet_enc_change_classes(region=None,puppetClasses=None,node=None):
-    classes = puppetClasses.split('&')
-    puppet_enc.puppet_node_update_classes(region=region,node=node,classes=classes)
-    return redirect(url_for('aws_app_route_puppet_enc_edit_node', region=region, node=node))
+    if request.method == 'POST':
+        print request.form
+        imd = ImmutableMultiDict(request.form)
+        if 'puppet_classes' in imd:
+            classes = imd.getlist('puppet_classes')
+            print classes
+        else:
+            classes = None
+            print classes
+        if 'puppet_paramaters' in imd:
+            paramaters = imd.getlist('puppet_paramaters')
+            print paramaters
+        else:
+            paramaters = None
+            print paramaters
+        d = {}
+        d['classes'] = classes
+        d['paramaters'] = paramaters
+        print d
+        
+        return render_template('puppet_enc_edit.html',region=region,node_info=node_info,node_meta_data=node_meta_data)
+    else:
+        return render_template('puppet_enc_edit.html',region=region,node_info=node_info,node_meta_data=node_meta_data)
  
 @app.route('/aws/puppet_enc/apply/<ip>')
 def aws_api_route_puppet_apply(ip=None):
