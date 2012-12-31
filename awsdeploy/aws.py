@@ -224,6 +224,7 @@ def ldap_add(ldaphost,admin,basedn,secret,name,ip):
 # This the generic application deployment task
 ###
 def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', size='m1.small', dmz='pri'):
+    appname = appname.lower()
     r=config.get_conf(az)
     authinfo = config.auth()
     env.user = authinfo['user']
