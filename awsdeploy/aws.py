@@ -304,7 +304,7 @@ def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='p
     authinfo = config.auth()
     env.user = authinfo['user']
     env.key_filename = authinfo['key_filename']
-    num = mongod.mongodb_third_count(r.region,az,appname)
+    num = mongod.mongodb_third_count(r.region,az,appname,dmz)
     num = int(num) + 1
     num = "%02d" % num
     name= az+'-'+dmz+'-'+appname+'-'+num
