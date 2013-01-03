@@ -8,13 +8,13 @@
 	<strong>Puppet ENC - Edit</strong>
     </div>
 	<p>
-	<button class="btn btn-success" type="button" style="width: 300px">{{node_meta_data['node']}}</button>
+	<button class="btn btn-success" type="button" style="width: 200px">{{node_meta_data['node']}}</button>
     <BR><BR>
     {% if node_info %}
-    <input type=submit class="btn btn-info" style="width: 300px" value="Update">
+    <input type=submit class="btn btn-info" style="width: 200px" value="Update">
     <BR><BR>
     <a href="{{ url_for('aws_api_route_puppet_apply', ip=node_meta_data['ip_addr'])}}">
-    	<button class="btn btn-warning" type="button" style="width: 300px">Puppet Apply</button>
+    	<button class="btn btn-warning" type="button" style="width: 200px">Puppet Apply</button>
     </a>
     {% endif %}
     <BR><BR>
