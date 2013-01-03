@@ -178,9 +178,17 @@ def update_dns(name,ip):
     creds = config.get_ec2_conf()
     route53conn = boto.connect_route53(creds['AWS_ACCESS_KEY_ID'],creds['AWS_SECRET_ACCESS_KEY'])
     changes = ResourceRecordSets(route53conn, hosted_zone_id='Z4512UDZ56AKC')
-    change = changes.add_change("CREATE", name+".asskickery.us", type="A", ttl="600")
-    change.add_value(ip)
-    changes.commit()
+    i = 0
+    while i < 100:
+        try:
+            change = changes.add_change("CREATE", name+".asskickery.us", type="A", ttl="600")
+            change.add_value(ip)
+            changes.commit()
+            break
+        except:
+            print "DNS: Issue Adding DNS Entry, Sleeping For 5 Seconds, Then Retrying"
+            time.sleep(5)
+            continue
 
 ###
 # This Checks The Status Of /home/appuser/finished which is applied by puppet
