@@ -306,7 +306,7 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
 
 def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='pri'):
     r=config.get_conf(az)
-    num = mongod.mongodb_third_count(r.region,az,appname)
+    num = mongod.mongodb_third_count(r.region,az,appname,dmz)
     num = int(num) + 1
     num = "%02d" % num
     name= az+'-'+dmz+'-'+appname+'-'+num
