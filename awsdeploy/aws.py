@@ -176,11 +176,18 @@ def associate_elastic_ip(elasticip, instance, region='us-east-1'):
 
 def update_dns(name,ip):
     creds = config.get_ec2_conf()
-    route53conn = boto.connect_route53(creds['AWS_ACCESS_KEY_ID'],creds['AWS_SECRET_ACCESS_KEY'])
-    changes = ResourceRecordSets(route53conn, hosted_zone_id='Z4512UDZ56AKC')
-    change = changes.add_change("CREATE", name+".asskickery.us", type="A", ttl="600")
-    change.add_value(ip)
-    changes.commit()
+    for attempt in range(20):
+        try:
+            route53conn = boto.connect_route53(creds['AWS_ACCESS_KEY_ID'],creds['AWS_SECRET_ACCESS_KEY'])
+            changes = ResourceRecordSets(route53conn, hosted_zone_id='Z4512UDZ56AKC')
+            change = changes.add_change("CREATE", name+".asskickery.us", type="A", ttl="600")
+            change.add_value(ip)
+            changes.commit()
+        except:
+            print "DNS Entry Failed, Sleeping 5, The Retrying"
+            time.sleep(5)
+    else:
+        print (red("PROBLEM: All Rout53 API Calls Failed"))
 
 ###
 # This Checks The Status Of /home/appuser/finished which is applied by puppet
