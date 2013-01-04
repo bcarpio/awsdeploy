@@ -84,3 +84,7 @@ def puppet_enc(region):
     if region == 'us-east-1':
         host = ['10.201.2.112','10.201.4.103','10.201.6.17']
     return {'database' : database, 'collection' : collection, 'meta_collection' : meta_collection, 'host' : host}
+
+def aws_instance_types():
+    aws_instance_types = ['m1.small', 'm1.medium', 'm1.large', 'm1.xlarge', 'm3.xlarge', 'm3.2xlarge', 'm2.xlarge', 'm2.2xlarge', 'm2.4xlarge', 'c1.medium', 'c1.xlarge']
+    return aws_instance_types
