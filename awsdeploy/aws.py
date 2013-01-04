@@ -183,6 +183,7 @@ def update_dns(name,ip):
             change = changes.add_change("CREATE", name+".asskickery.us", type="A", ttl="600")
             change.add_value(ip)
             changes.commit()
+            break
         except:
             print "DNS Entry Failed, Sleeping 5, The Retrying"
             time.sleep(5)
