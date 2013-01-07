@@ -3,20 +3,20 @@
 <div class="row-fluid">
 	<div class="span3 offset1" align="center">
 	<div class="alert alert-info">
-	<strong>Deploy Java</strong>
+	<strong>Deploy Nginx</strong>
     </div>
 	<p>
 	<BR>
-	<button class="btn btn-success" type="button" style="width: 150px">Java Node</button>
+	<button class="btn btn-success" type="button" style="width: 150px">Nginx Node</button>
 	</div>
     <div class="span3" align="center">
     <div class="alert alert-info">
-    <strong>Java Options</strong>
+    <strong>Nginx Options</strong>
     </div>
     <p>
     <BR>
     	{% from "_formhelpers.html" import render_field %}
-		<form method=post action="/aws/deploy/java">
+		<form method=post action="/aws/deploy/Nginx">
 		  <table class="table">
 		    {{ render_field(form.appname) }}
 		    {{ render_field(form.version) }}
@@ -37,7 +37,7 @@
     </div>
    <div class="span3" align="center">
     <div class="alert alert-info">
-    <strong>Manage Java Versions</strong>
+    <strong>Manage Nginx Versions</strong>
     </div>
     <p>
     <BR>
@@ -56,22 +56,19 @@
     				</center>
     			</td>
     		</tr>
-    	</table>
-    	<form method=post action="/aws/upload/java" enctype=multipart/form-data>
-    	<table class="table">
     		<tr>
     			<td><strong>Upload:</strong></td>
-    			<td><center><input type=file name=file></center></td>
+    			<td><input type="text" name="upload_Nginx"</td>
+    			<td><a class="file_browse" href="#"><button class="btn btn-info btn-small" type="button">Browse</button></a></td>
     		</tr>
     		<tr>
-    			<td colspan="2" align="center">
+    			<td colspan="3">
     				<center>
-    				<input type=submit class="btn btn-warning btn-small" value="Upload" style="width: 150px">
+    				<a class="upload_Nginx" href="#"><button class="btn btn-warning btn-small" type="button" style="width: 150px">Upload</button></a>
     				</center>
     			</td>
     		</tr>
     	</table>
-    	</form>
     	
     </div>
 
