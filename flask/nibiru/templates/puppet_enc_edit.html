@@ -13,7 +13,7 @@
     {% if node_info %}
     <input type=submit class="btn btn-info" style="width: 300px" value="Update">
     <BR><BR>
-    <a href="{{ url_for('aws_api_route_puppet_apply', ip=node_meta_data['ip_addr'])}}">
+    <a href="{{ url_for('aws_app_route_puppet_apply', ip=node_meta_data['ip_addr'])}}">
     	<button class="btn btn-warning" type="button" style="width: 300px">Puppet Apply</button>
     </a>
     {% endif %}

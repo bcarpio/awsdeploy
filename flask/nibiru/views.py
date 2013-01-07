@@ -15,6 +15,7 @@ import aws_instance
 import elastic_load_balancers
 import puppet_enc
 import forms
+import aws_s3
 from nibiru import app
 
 #### Home Page
@@ -142,7 +143,47 @@ def aws_app_route_deploy_java():
         list = app_deploy_generic(appname=appname, version=version, az=az, count=count, puppetClass=('java','nodejs'), size=size, dmz='pri')
         list = ",".join(list)
         return redirect(url_for('aws_app_route_deploy_result', list=list))
-    return render_template('aws_deploy_java.html', form=form)
+    java_version_list = aws_s3.get_bucket_list(bucket='nibiru_puppet',dir='java/')
+    return render_template('aws_deploy_java.html', form=form, java_version_list=java_version_list)
+
+@app.route('/aws/upload/java', methods=["POST"])
+def app_route_upload_java():
+    if request.method == 'POST':
+        file = request.files['file']
+        filename = file.filename
+        aws_s3.upload_file_s3_bucket(bucket='nibiru_puppet',file=file,filename=filename,dir='/java/')
+        return redirect(url_for('aws_app_route_deploy_java'))
+    return redirect(url_for('aws_app_route_deploy_java'))
+            
+
+@app.route('/aws/deploy/nodejs', methods=['GET', 'POST'])
+def aws_app_route_deploy_nodejs():
+    form = forms.nodejs_deployment(request.form)
+    if request.method == 'POST' and form.validate():
+        appname = form.appname.data
+        version = form.version.data
+        count = form.count.data
+        size = form.size.data
+        az = form.az.data
+        list = app_deploy_generic(appname=appname, version=version, az=az, count=count, puppetClass='nodejs', size=size, dmz='pri')
+        list = ",".join(list)
+        return redirect(url_for('aws_app_route_deploy_result', list=list))
+    return render_template('aws_deploy_nodejs.html', form=form)
+
+@app.route('/aws/deploy/nginx', methods=['GET', 'POST'])
+def aws_app_route_deploy_nginx():
+    form = forms.nginx_deployment(request.form)
+    if request.method == 'POST' and form.validate():
+        appname = form.appname.data
+        version = form.version.data
+        count = form.count.data
+        size = form.size.data
+        az = form.az.data
+        list = app_deploy_generic(appname=appname, version=version, az=az, count=count, puppetClass=('nginx','nodejs'), size=size, dmz='pri')
+        list = ",".join(list)
+        return redirect(url_for('aws_app_route_deploy_result', list=list))
+    return render_template('aws_deploy_nginx.html', form=form)
+
 
 
 #### Puppet ENC
@@ -181,7 +222,7 @@ def aws_app_route_puppet_enc_edit_node(region=None,node=None):
         return render_template('puppet_enc_edit.html',region=region,node_info=node_info,node_meta_data=node_meta_data)
  
 @app.route('/aws/puppet_enc/apply/<ip>')
-def aws_api_route_puppet_apply(ip=None):
+def aws_app_route_puppet_apply(ip=None):
     output = execute(puppet.puppetd_test, host=ip)
     output = output.values()
     output = '\n'.join(output)
