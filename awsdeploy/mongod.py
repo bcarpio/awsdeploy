@@ -88,7 +88,7 @@ def mongodb_app_count(region,az,appname,version,dmz):
     for node in nodes:
         if node:
             node = node['node'].split('.')[0]
-            num = node.split('-')[4]
+            num = node.split('-')[-1] 
     return num
 
 def mongodb_third_count(region,az,appname,dmz):
@@ -103,7 +103,7 @@ def mongodb_third_count(region,az,appname,dmz):
     for node in nodes:
         if node:
             node = node['node'].split('.')[0]
-            num = node.split('-')[3]
+            num = node.split('-')[-1] 
     return num
 
 def mongodb_shardnum(region,az,shard,app):

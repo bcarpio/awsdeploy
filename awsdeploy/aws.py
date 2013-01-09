@@ -56,7 +56,8 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subn
     time.sleep(2)
     ldap_add(ldaphost,admin,basedn,secret,name,ip)
     update_dns(name,ip)
-    ec2conn.create_tags([rid], {'Name': name})
+    create_tags(ec2conn,rid,name)
+    #ec2conn.create_tags([rid], {'Name': name})
     execute(puppet.add_node_to_mongodb_enc,name,host=puppetmaster)
     mongod.add_meta_data(region,name,instance_info)
     print (blue("SUCCESS: Node '%s' Deployed To %s")%(name,region))
@@ -168,6 +169,21 @@ def associate_elastic_ip(elasticip, instance, region='us-east-1'):
     creds = config.get_ec2_conf()
     ec2conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
     ec2conn.associate_address(instance_id=instance,allocation_id=elasticip,public_ip=None)
+
+####
+# Create AWS Tags
+####
+
+def create_tags(ec2conn,rid,name):
+    for attempt in range(20):
+        try:
+            ec2conn.create_tags([rid], {'Name': name})
+            break
+        except:
+            print "AWS Instance Tagging Failed, Sleeping 5, The Retrying"
+            time.sleep(5)
+    else:
+        print (red("PROBLEM: AWS Tagging API Call Failed"))
 
 
 #### 
