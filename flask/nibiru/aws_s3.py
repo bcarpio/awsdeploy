@@ -21,7 +21,6 @@ def get_bucket_list(bucket=None,dir=None):
     bucket = conn.get_bucket(bucket)
     for key in bucket.list(dir):
         if key.name != dir:
-            file_name = key.name.replace(dir,'')
-            bucket_list.append(file_name)
-        
+            file_name = key.name.replace('jdk','').replace(dir,'')
+            bucket_list.append(file_name)    
     return bucket_list
