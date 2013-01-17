@@ -53,11 +53,15 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subn
     )
     rid = instance_info.instances[0].id
     ip = instance_info.instances[0].private_ip_address
-    time.sleep(2)
+    instance = instance_info.instances[0]
+    status = instance.update()
+    while status == 'pending':
+        print "Waiting for instance to change status from PENDING"
+        time.sleep(2)
+        status = instance.update()
     ldap_add(ldaphost,admin,basedn,secret,name,ip)
     update_dns(name,ip)
     create_tags(ec2conn,rid,name)
-    #ec2conn.create_tags([rid], {'Name': name})
     execute(puppet.add_node_to_mongodb_enc,name,host=puppetmaster)
     mongod.add_meta_data(region,name,instance_info)
     print (blue("SUCCESS: Node '%s' Deployed To %s")%(name,region))

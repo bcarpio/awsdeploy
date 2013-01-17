@@ -42,20 +42,15 @@
     <p>
     <BR>
     	<table class="table">
+    	{% for version in java_version_list %}
     		<tr>
     			<td colspan="3">
     				<center>
-    				1.6.0_16
+    				{{version}}
     				</center>
     			</td>
     		</tr>
-    		<tr>
-    			<td colspan="3">
-    				<center>
-    				1.7.0_03
-    				</center>
-    			</td>
-    		</tr>
+   		{% endfor %}	
     	</table>
     	<form method=post action="/aws/upload/java" enctype=multipart/form-data>
     	<table class="table">
