@@ -3,6 +3,7 @@
 from fabric.api import *
 from fabric.operations import local,put
 from fabric.colors import *
+from fabric.network import disconnect_all
 import config
 import os
 import sys
@@ -35,6 +36,8 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subn
     creds = config.get_ec2_conf()
     if "." in name:
         print (red("PROBLEM: Do Not Use Periods In Names"))
+    print("Deploying Server (" + name + ")")
+    sys.stdout.flush()
     mongod.mongodb_enc_check(region,name)
     ldap_check(ldaphost,basedn,name)
     template = open(os.path.join(os.path.dirname(__file__),'../templates/user-data.template')).read()
@@ -51,17 +54,32 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subn
         subnet_id=subnet,
         user_data=user_data
     )
+    instance = instance_info.instances[0]
+    for attempt in range(20):
+        try:
+            status = instance.update()
+        except:
+            time.sleep(10)
+        else:
+            break
+    else:
+        print (red("PROBLEM: Failed to get instance status " + instance.id))
+        sys.exit(1)
+    for attempt in range(20):
+        if (status == 'pending'):
+            time.sleep(10)
+            status = instance.update()
+        else:
+            break
+    else: 
+        print (red("PROBLEM: instance stuck in pending status " + instance.id))
+        sys.exit(1)
     rid = instance_info.instances[0].id
     ip = instance_info.instances[0].private_ip_address
-    instance = instance_info.instances[0]
-    status = instance.update()
-    while status == 'pending':
-        print "Waiting for instance to change status from PENDING"
-        time.sleep(2)
-        status = instance.update()
     ldap_add(ldaphost,admin,basedn,secret,name,ip)
     update_dns(name,ip)
     create_tags(ec2conn,rid,name)
+    #ec2conn.create_tags([rid], {'Name': name})
     execute(puppet.add_node_to_mongodb_enc,name,host=puppetmaster)
     mongod.add_meta_data(region,name,instance_info)
     print (blue("SUCCESS: Node '%s' Deployed To %s")%(name,region))
@@ -261,69 +279,72 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
     total = 0
     iplist = []
     hostnamelist = []
-    with settings(
-        hide('running', 'stdout')
-    ):
-        while total < count:
-            num = mongod.mongodb_app_count(r.region,az,appname,version,dmz)
-            num = int(num) + 1
-            num = "%02d" % num
-            name = az+'-pri-'+appname+'-'+version+'-'+num
-            if az == 'use1a':
-                ip_rid = deploy_east_1a_private_2(name=name,size=size)
-                ip = ip_rid['ip']
-            if az == 'use1c':
-                ip_rid = deploy_east_1c_private_4(name=name,size=size)
-                ip = ip_rid['ip']
-            if az == 'usw2a':
-                ip_rid = deploy_west_2a_private_2(name=name,size=size)
-                ip = ip_rid['ip']
-            if az == 'usw2b':
-                ip_rid = deploy_west_2b_private_4(name=name,size=size)
-                ip = ip_rid['ip']
-            if az == 'dev':
-                ip_rid = deploy_west_ec2_ami(name=name,size=size)
-                ip = ip_rid['ip']
-            if az == 'qa':
-                ip_rid = deploy_west_ec2_ami(name=name,size=size)
-                ip = ip_rid['ip']
-            iplist.append(ip)
-            hostnamelist.append(name)
-            total = int(total) + 1
+    while total < count:
+        num = mongod.mongodb_app_count(r.region,az,appname,version,dmz)
+        num = int(num) + 1
+        num = "%02d" % num
+        name = az+'-pri-'+appname+'-'+version+'-'+num
+        if az == 'use1a':
+            ip_rid = deploy_east_1a_private_2(name=name,size=size)
+            ip = ip_rid['ip']
+        if az == 'use1c':
+            ip_rid = deploy_east_1c_private_4(name=name,size=size)
+            ip = ip_rid['ip']
+        if az == 'usw2a':
+            ip_rid = deploy_west_2a_private_2(name=name,size=size)
+            ip = ip_rid['ip']
+        if az == 'usw2b':
+            ip_rid = deploy_west_2b_private_4(name=name,size=size)
+            ip = ip_rid['ip']
+        if az == 'dev':
+            ip_rid = deploy_west_ec2_ami(name=name,size=size)
+            ip = ip_rid['ip']
+        if az == 'qa':
+            ip_rid = deploy_west_ec2_ami(name=name,size=size)
+            ip = ip_rid['ip']
+        iplist.append(ip)
+        hostnamelist.append(name)
+        total = int(total) + 1
 
-        for host in hostnamelist:
-            if isinstance(puppetClass, basestring):
-                execute(puppet.add_puppetClasses_to_mongodb_enc,hostname=host,puppetClass=puppetClass,host=r.puppetmaster)
-            else:
-                for pclass in puppetClass:
-                    execute(puppet.add_puppetClasses_to_mongodb_enc,hostname=host,puppetClass=pclass,host=r.puppetmaster)
-
-        time.sleep(120)
-
-        if len(iplist) == 1:
-            env.parallel = False
+    for host in hostnamelist:
+        if isinstance(puppetClass, basestring):
+            execute(puppet.add_puppetClasses_to_mongodb_enc,hostname=host,puppetClass=puppetClass,host=r.puppetmaster)
         else:
-            env.parallel = True
+            for pclass in puppetClass:
+                execute(puppet.add_puppetClasses_to_mongodb_enc,hostname=host,puppetClass=pclass,host=r.puppetmaster)
 
-        status = 1
-        runs = 0
-        while status != 0:
-            if runs > 60:
-                print (red("PROBLEM: Deployment Failed"))
-                sys.exit(1)
-            get_status = execute(get_aws_deployment_status, hosts=iplist)
-            total = 0
-            for s in get_status.values():
-                s = int(s)
-                status = total + s
-            time.sleep(10)
-            runs += 1
+    time.sleep(120)
+
+    if len(iplist) == 1:
+        env.parallel = False
+    else:
+        env.parallel = True
+
+    status = 1
+    runs = 0
+    while status != 0:
+        if runs > 60:
+            print ("Timeout waiting for puppet to finish")
+            print (red("PROBLEM: Deployment Failed"))
+            sys.exit(1)
+        with settings(warn_only=True):
+           try:
+               get_status = execute(get_aws_deployment_status, hosts=iplist)
+               total = 0
+               for s in get_status.values():
+                   s = int(s)
+                   status = total + s
+           except BaseException as e:
+               status = 1
+               print("Error getting status")
+        time.sleep(10)
+        runs += 1
+    disconnect_all()
     return iplist
 
 ####
 #  3rd Party Deployment
 ####
-
 def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='pri'):
     r=config.get_conf(az)
     num = mongod.mongodb_third_count(r.region,az,appname,dmz)
