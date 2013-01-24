@@ -1,4 +1,4 @@
-# Amazin Deployment Automation To KickAssery AWS Account #
+# Amazon Deployment Automation To KickAssery AWS Account #
 
 This git repo contains all the necessary ssl certificates, ssh keys, and user-data scripts to deploy to the KickAssery AWS account so new instances connect to puppet and have the right monitoring installed, resolv.conf setup, ssh-keys configured etc.. 
 
