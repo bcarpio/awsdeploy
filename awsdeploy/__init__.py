@@ -36,10 +36,6 @@ def deploy_cheetah(version, az='dev', count='1', size='m1.large'):
 def deploy_redis(az='dev'):
     aws.third_party_generic_deployment(appname='redis',puppetClass='redis',az=az,size='m1.small')
 
-@task
-def deploy_apt_repo(az='dev'):
-    aws.third_party_generic_deployment(appname='apt',puppetClass='puppet',az=az,size='m1.small')
-
 ####
 # Zookeeper Deployment
 ####
@@ -163,22 +159,10 @@ def deploy_pub_loadbalancers(appname,az):
 # Mongodb Deployment
 ####
 
-@task
-def deploy_mongodb_replica_set_sl(az,shard):
-    deploy_five_node_mongodb_replica_set(az,shard=shard,app='sl')
 
 @task
-def deploy_mongodb_replica_set_gt(az,shard):
-    deploy_five_node_mongodb_replica_set(az,shard=shard,app='gt')
-
-@task
-def deploy_mongodb_replica_set_inf(az,shard):
-    deploy_three_node_mongodb_replica_set(az,shard=shard,app='inf')
-
-@task
-def deploy_mongodb_replica_set_gl2(az,shard):
-    deploy_three_node_mongodb_replica_set(az,shard=shard,app='gl2')
-
+def deploy_mongodb_replica_set(az,shard,app):
+    deploy_five_node_mongodb_replica_set(az=az,shard=shard,app=app)
 
 ###
 # Gluster Deployment
@@ -199,6 +183,14 @@ def deploy_nimbus(appname,az='dev'):
 @task
 def deploy_storm(appname,az='dev'):
     aws.third_party_generic_deployment(appname=appname+'-storm',puppetClass=('java','storm::supervisor'),az=az,size='m1.small')
+
+###
+# Apt Deployment
+###
+
+@task
+def deploy_aptrepo(az='dev'):
+    aws.third_party_generic_deployment(appname='apt',puppetClass='aptrepo',az=az,size='m1.small')
     
 ####
 # Remove An Instance
