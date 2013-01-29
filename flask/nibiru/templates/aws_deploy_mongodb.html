@@ -1,0 +1,56 @@
+{% include "header.html" ignore missing %}
+
+<div class="row-fluid">
+	<div class="span3 offset1" align="center">
+	<div class="alert alert-info">
+	<strong>Deploy Mongodb</strong>
+    </div>
+	<p>
+	<BR>
+	<button class="btn btn-success" type="button" style="width: 250px">Mongodb Replica Set</button>
+	</div>
+    <div class="span3" align="center">
+    <div class="alert alert-info">
+    <strong>Mongodb Options</strong>
+    </div>
+    <p>
+    <BR>
+    	{% from "_formhelpers.html" import render_field %}
+		<form method=post action="/aws/deploy/mongodb">
+		  <table class="table">
+		    {{ render_field(form.appname) }}
+		    {{ render_field(form.shard) }}
+		    {{ render_field(form.az) }}
+		    
+		   <tr>
+		   	<td colspan="2"><center><input type=submit class="btn btn-info btn-small" style="width: 150px" value="Deploy"></center></td>
+		   </tr>
+		  </table>
+ 		      				
+	
+</form>
+	
+    			
+					
+	
+    </div>
+   <div class="span3" align="center">
+    <div class="alert alert-info">
+    <strong>Manage Mongodb</strong>
+    </div>
+    <p>
+    <BR>
+    	<table class="table">
+    		<tr>
+    			<td colspan="3">
+    				
+    			</td>
+    		</tr>
+    	</table>
+    	</form>
+    	
+    </div>
+
+</div>
+</body>
+</html>

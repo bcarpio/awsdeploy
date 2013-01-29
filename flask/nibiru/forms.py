@@ -20,3 +20,8 @@ class nginx_deployment(Form):
     count = TextField('<strong>Count</strong>', [validators.Length(min=1, max=2),validators.Required()])
     size = SelectField('<strong>Size</strong>', choices=[('m1.small', 'm1.small'),('m1.medium','m1.medium'),('m1.large','m1.large'),('m1.xlarge','m1.xlarge')])
     az = SelectField('<strong>Availability Zone:</strong>', choices=[('dev','Development'),('qa','QA'),('usw2a','us-west-2a'),('usw2b','us-west-2b'),('use1a','us-east-1a'),('use1c','us-east-1c')])
+
+class mongodb_deployment(Form):
+    appname = TextField('<strong>App Name:</strong>', [validators.Length(min=4, max=25),validators.Required()])
+    az = SelectField('<strong>Environment:</strong>', choices=[('usw2a','PQA'),('use1a','PROD')])
+    shard = TextField('<strong>Shard:</strong>', [validators.Length(min=1, max=1),validators.Required()])
