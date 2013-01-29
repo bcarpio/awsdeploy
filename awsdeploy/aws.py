@@ -483,6 +483,7 @@ def setup_four_drive_mirror():
     sudo('dd if=/dev/urandom of=/etc/data.key bs=1 count=32')
     time.sleep(5)
     sudo('cat /etc/data.key | cryptsetup luksFormat /dev/md0')
+    time.sleep(5)
     sudo('cat /etc/data.key | cryptsetup luksOpen /dev/md0 data')
 
 def setup_two_drive_mirror():
@@ -553,7 +554,6 @@ def deploy_one_node_with_10_ebs_io_volumes_raid_0(az,appname,puppetClass,iops='y
     ip_rid = third_party_generic_deployment(appname=appname,puppetClass=puppetClass,az=az,size=size,dmz='pri')
     rid = ip_rid['rid']
     ip = ip_rid['ip']
-    time.sleep(120)
     for lun in ['/dev/sdf', '/dev/sdg', '/dev/sdh', '/dev/sdi', '/dev/sdj', '/dev/sdk', '/dev/sdl', '/dev/sdm', '/dev/sdn', '/dev/sdo']:
         ebs_vol = create_ebs_volume(az=az,iops=iops,size=capacity)
         attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
@@ -570,10 +570,10 @@ def deploy_five_nodes_with_4_ebs_volumes_raid_0(az,appname,puppetClass,iops='no'
             ip_rid = third_party_generic_deployment(appname=appname,puppetClass=puppetClass,az=azloop,size=size,dmz='pri')
             rid = ip_rid['rid']
             ip = ip_rid['ip']
-            iplist.append(ip) 
-            time.sleep(120)
+            iplist.append(ip)
             for lun in ['/dev/sdf', '/dev/sdg', '/dev/sdh', '/dev/sdi']:
                 ebs_vol = create_ebs_volume(az=azloop,iops=iops,size=capacity)
+                time.sleep(5)
                 attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
     if az in ['usw2a', 'usw2b', 'usw2c']:
         for azloop in ['usw2a', 'usw2a', 'usw2b', 'usw2b', 'usw2c']:
@@ -581,9 +581,9 @@ def deploy_five_nodes_with_4_ebs_volumes_raid_0(az,appname,puppetClass,iops='no'
             rid = ip_rid['rid']
             ip = ip_rid['ip']
             iplist.append(ip)
-            time.sleep(120)
             for lun in ['/dev/sdf', '/dev/sdg', '/dev/sdh', '/dev/sdi']:
                 ebs_vol = create_ebs_volume(az=azloop,iops=iops,size=capacity)
+                time.sleep(5)
                 attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
     time.sleep(300)
     env.parallel = True
@@ -599,7 +599,6 @@ def deploy_three_nodes_with_2_ebs_volumes_raid_0(az,appname,puppetClass,iops='no
             rid = ip_rid['rid']
             ip = ip_rid['ip']
             iplist.append(ip)
-            time.sleep(120)
             for lun in ['/dev/sdf', '/dev/sdg']:
                 ebs_vol = create_ebs_volume(az=azloop,iops=iops,size=capacity)
                 attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
@@ -609,7 +608,6 @@ def deploy_three_nodes_with_2_ebs_volumes_raid_0(az,appname,puppetClass,iops='no
             rid = ip_rid['rid']
             ip = ip_rid['ip']
             iplist.append(ip)
-            time.sleep(120)
             for lun in ['/dev/sdf', '/dev/sdg', '/dev/sdh', '/dev/sdi']:
                 ebs_vol = create_ebs_volume(az=azloop,iops=iops,size=capacity)
                 attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
@@ -635,6 +633,7 @@ def deploy_five_node_mongodb_replica_set(az, shard='1', setname='mongo', app='sl
     execute(mongod.start, hosts=iplist)
     time.sleep(180)
     execute(mongod.create_five_node_mongo_cluster,host=iplist[0],setname=setname,node1=iplist[0],node2=iplist[1],node3=iplist[2],node4=iplist[3],node5=iplist[4])
+    return iplist
 
 def deploy_three_node_mongodb_replica_set(az, shard='1', setname='mongo', app='inf'):
     env.warn_only = False

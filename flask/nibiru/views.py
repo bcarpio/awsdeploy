@@ -49,9 +49,6 @@ def app_route_cornell():
 def app_route_boston():
 	return render_template('boston.html')
 
-@app.route('/aws/deploy')
-def app_route_aws_deploy():
-    return render_template('aws_deploy.html')
 
 #### AWS Web EBS Volume Management 
 
@@ -126,6 +123,10 @@ def aws_app_route_elastic_load_balancers(region=None):
 
 #### Aws Deployment Tasks
 
+@app.route('/aws/deploy')
+def app_route_aws_deploy():
+    return render_template('aws_deploy.html')
+
 @app.route('/aws/deploy/result/<list>')
 def aws_app_route_deploy_result(list=None):
     list = list.split(',')
@@ -184,7 +185,17 @@ def aws_app_route_deploy_nginx():
         return redirect(url_for('aws_app_route_deploy_result', list=list))
     return render_template('aws_deploy_nginx.html', form=form)
 
-
+@app.route('/aws/deploy/mongodb', methods=['GET','POST'])
+def aws_app_route_deploy_mongodb():
+    form = forms.mongodb_deployment(request.form)
+    if request.method == 'POST' and form.validate():
+        appname = form.appname.data
+        shard = form.shard.data
+        az = form.az.data
+        list = deploy_five_node_mongodb_replica_set(az=az,shard=shard,app=appname)
+        list = ",".join(list)
+        return redirect(url_for('aws_app_route_deploy_result', list=list))
+    return render_template('aws_deploy_mongodb.html', form=form)
 
 #### Puppet ENC
 
