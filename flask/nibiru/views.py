@@ -197,6 +197,19 @@ def aws_app_route_deploy_mongodb():
         return redirect(url_for('aws_app_route_deploy_result', list=list))
     return render_template('aws_deploy_mongodb.html', form=form)
 
+@app.route('/aws/deploy/haproxy', methods=['GET','POST'])
+def aws_app_route_deploy_haproxy():
+    form = forms.haproxy_deployment(request.form)
+    if request.method == 'POST' and form.validate():
+        appname = form.appname.data
+        az = form.az.data
+        list = deploy_pub_loadbalancers(appname=appname,az=az)
+        print list
+        list = ",".join(list)
+        return redirect(url_for('aws_app_route_deploy_result', list=list))
+    return render_template('aws_deploy_haproxy.html', form=form)
+
+
 #### Puppet ENC
 
 @app.route('/aws/puppet_enc/<region>')
@@ -226,10 +239,9 @@ def aws_app_route_puppet_enc_edit_node(region=None,node=None):
         d = {}
         d['classes'] = classes
         d['paramaters'] = paramaters
-        print d
-        
         return render_template('puppet_enc_edit.html',region=region,node_info=node_info,node_meta_data=node_meta_data)
     else:
+        print node_meta_data
         return render_template('puppet_enc_edit.html',region=region,node_info=node_info,node_meta_data=node_meta_data)
  
 @app.route('/aws/puppet_enc/apply/<ip>')
