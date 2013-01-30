@@ -135,3 +135,12 @@ def add_meta_data(region,name,instance_info):
     d['root_device_type'] = instance_info.instances[0].__dict__['root_device_type']
     d['subnet_id'] = instance_info.instances[0].__dict__['subnet_id']
     col.insert(d)
+
+def add_public_ip(region,rid,elastic_ip):
+    puppet_config = config.puppet_enc(region)
+    database = puppet_config['database']
+    collection = puppet_config['meta_collection']
+    host = puppet_config['host']
+    con = Connection(host)
+    col = con[database][collection]
+    col.update({'instance_id' : rid}, {"$set" : {'elastic_ip': elastic_ip}})

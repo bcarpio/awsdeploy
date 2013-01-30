@@ -152,8 +152,11 @@ def deploy_pub_loadbalancers(appname,az):
     allocid = aws.allocate_elastic_ip(region=r.region)
     ip_rid = aws.third_party_generic_deployment(appname='haproxy-'+appname,puppetClass=('haproxy','stud','nodejs'),az=az,size='m1.small',dmz='pub')
     rid = ip_rid['rid']
-    time.sleep(30)
-    aws.associate_elastic_ip(elasticip=allocid,instance=rid,region=r.region)
+    aws.associate_elastic_ip(elasticip=allocid.allocation_id,instance=rid,region=r.region)
+    mongod.add_public_ip(region=r.region,rid=rid,elastic_ip=allocid.public_ip)
+    iplist = []
+    iplist.append(ip_rid['ip'])
+    return iplist
 
 ####
 # Mongodb Deployment

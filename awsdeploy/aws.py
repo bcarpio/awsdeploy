@@ -184,7 +184,7 @@ def allocate_elastic_ip(region='us-east-1'):
     creds = config.get_ec2_conf()
     ec2conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY']) 
     allocid = ec2conn.allocate_address(domain='vpc')
-    allocid = allocid.allocation_id
+    #allocid = allocid.allocation_id
     return allocid
 
 def associate_elastic_ip(elasticip, instance, region='us-east-1'):
