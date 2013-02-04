@@ -399,6 +399,7 @@ def remove_prod_pqa_ec2_instance(name, az):
     env.warn_only = True
     with lcd(os.path.join(os.path.dirname(__file__),'.')):
         local('zabbix_api/remove_host.py %s %s' %(r.zserver,name))
+        local('zabbix_api/remove_host.py %s %s' %(r.zserver,name))
         local('/usr/bin/ldapdelete -x -w %s -D "cn=admin,dc=social,dc=local" -h %s cn=%s,ou=hosts,dc=social,dc=local' %(r.secret,r.ldap,name))
         execute(puppet.puppetca_clean,name+'.social.local',host=r.puppetmaster)
         ip = local("host "+name+".asskickery.us | awk '{print $4}'", capture=True)
