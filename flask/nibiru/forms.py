@@ -29,3 +29,7 @@ class mongodb_deployment(Form):
 class haproxy_deployment(Form):
     appname = TextField('<strong>App Name:</strong>', [validators.Length(min=4, max=25),validators.Required()])
     az = SelectField('<strong>Availability Zone:</strong>', choices=[('usw2a','us-west-2a'),('usw2b','us-west-2b'),('use1a','us-east-1a'),('use1c','us-east-1c')])
+    
+class cassandra_deployment(Form):
+    appname = TextField('<strong>App Name:</strong>', [validators.Length(min=4, max=25),validators.Required()])
+    az = SelectField('<strong>Environment:</strong>', choices=[('usw2a','PQA'),('use1a','PROD')])   
