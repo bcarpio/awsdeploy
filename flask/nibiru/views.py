@@ -204,11 +204,20 @@ def aws_app_route_deploy_haproxy():
         appname = form.appname.data
         az = form.az.data
         list = deploy_pub_loadbalancers(appname=appname,az=az)
-        print list
         list = ",".join(list)
         return redirect(url_for('aws_app_route_deploy_result', list=list))
     return render_template('aws_deploy_haproxy.html', form=form)
 
+@app.route('/aws/deploy/cassandra', methods=['GET','POST'])
+def aws_app_route_deploy_cassandra():
+    form = forms.cassandra_deployment(request.form)
+    if request.method == 'POST' and form.validate():
+        appname = form.appname.data
+        az = form.az.data
+        list = deploy_five_node_cassandra(appname=appname,az=az)
+        list = ",".join(list)
+        return redirect(url_for('aws_app_route_deploy_result', list=list))
+    return render_template('aws_deploy_cassandra.html', form=form)
 
 #### Puppet ENC
 
