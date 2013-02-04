@@ -33,4 +33,3 @@ class haproxy_deployment(Form):
 class cassandra_deployment(Form):
     appname = TextField('<strong>App Name:</strong>', [validators.Length(min=4, max=25),validators.Required()])
     az = SelectField('<strong>Environment:</strong>', choices=[('usw2a','PQA'),('use1a','PROD')])   
-    
