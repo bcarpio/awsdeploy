@@ -14,8 +14,8 @@ def ebs_volumes(region=None):
         ebs = conn.get_all_volumes()
         ebs_vol = []
         for vol in ebs:
-                state = vol.attachment_state()
-                if state == None:
+                status = vol.status
+                if status != 'in-use':
                         ebs_info = { 'id' : vol.id, 'size' : vol.size, 'iops' : vol.iops, 'status' : vol.status }
                         ebs_vol.append(ebs_info)
         return ebs_vol

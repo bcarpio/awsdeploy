@@ -31,8 +31,8 @@ def aws_stats():
                 event_count = event_count + 1
 
         for vol in ebs:
-            state = vol.attachment_state()
-            if state == None:
+            status = vol.status
+            if status != 'in-use':
                 unattached_ebs = unattached_ebs + 1
 
         elis = conn.get_all_addresses()
