@@ -292,7 +292,7 @@ def ldap_add(ldaphost,admin,basedn,secret,name,ip):
 ### 
 # This the generic application deployment task
 ###
-def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', size='m1.small', dmz='pri'):
+def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', size='m1.small', dmz='pri',ephemeral=None):
     appname = appname.lower()
     r=config.get_conf(az)
     version = version.replace('.','x')
@@ -308,22 +308,22 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
         num = "%02d" % num
         name = az+'-pri-'+appname+'-'+version+'-'+num
         if az == 'use1a':
-            ip_rid = deploy_east_1a_private_2(name=name,size=size)
+            ip_rid = deploy_east_1a_private_2(name=name,size=size,ephemeral=ephemeral)
             ip = ip_rid['ip']
         if az == 'use1c':
-            ip_rid = deploy_east_1c_private_4(name=name,size=size)
+            ip_rid = deploy_east_1c_private_4(name=name,size=size,ephemeral=ephemeral)
             ip = ip_rid['ip']
         if az == 'usw2a':
-            ip_rid = deploy_west_2a_private_2(name=name,size=size)
+            ip_rid = deploy_west_2a_private_2(name=name,size=size,ephemeral=ephemeral)
             ip = ip_rid['ip']
         if az == 'usw2b':
-            ip_rid = deploy_west_2b_private_4(name=name,size=size)
+            ip_rid = deploy_west_2b_private_4(name=name,size=size,ephemeral=ephemeral)
             ip = ip_rid['ip']
         if az == 'dev':
-            ip_rid = deploy_west_ec2_ami(name=name,size=size)
+            ip_rid = deploy_west_ec2_ami(name=name,size=size,ephemeral=ephemeral)
             ip = ip_rid['ip']
         if az == 'qa':
-            ip_rid = deploy_west_ec2_ami(name=name,size=size)
+            ip_rid = deploy_west_ec2_ami(name=name,size=size,ephemeral=ephemeral)
             ip = ip_rid['ip']
         iplist.append(ip)
         hostnamelist.append(name)
