@@ -15,6 +15,8 @@ import ldap.modlist as modlist
 import boto
 from boto.ec2 import *
 from boto.route53.record import ResourceRecordSets
+from boto.ec2.blockdevicemapping import BlockDeviceType
+from boto.ec2.blockdevicemapping import BlockDeviceMapping
 
 ####
 # Define Some Global Values
@@ -32,7 +34,7 @@ env.connection_attempts = 10
 # * Adds The Node To Route 53
 ####
 
-def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subnet, sgroup, domain, puppetmaster, admin):
+def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subnet, sgroup, domain, puppetmaster, admin, ephemeral):
     creds = config.get_ec2_conf()
     if "." in name:
         print (red("PROBLEM: Do Not Use Periods In Names"))
@@ -43,6 +45,24 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subn
     template = open(os.path.join(os.path.dirname(__file__),'../templates/user-data.template')).read()
     user_data = template.replace('HOSTNAME',name).replace('DOMAIN',domain).replace('PUPPETMASTER',puppetmaster)
     ec2conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY'])
+    
+    if ephemeral:
+        mapping = BlockDeviceMapping()
+        eph0 = BlockDeviceType()
+        eph1 = BlockDeviceType()
+        eph2 = BlockDeviceType()
+        eph3 = BlockDeviceType()
+        eph0.ephemeral_name = 'ephemeral0'
+        eph1.ephemeral_name = 'ephemeral1'
+        eph2.ephemeral_name = 'ephemeral2'
+        eph3.ephemeral_name = 'ephemeral3'
+        mapping['/dev/sdb'] = eph0
+        mapping['/dev/sdc'] = eph1
+        mapping['/dev/sdd'] = eph2
+        mapping['/dev/sde'] = eph3
+    else:
+        mapping = None
+
     instance_info = ec2conn.run_instances(
         image_id=ami,
         key_name=creds['EC2_KEYPAIR'],
@@ -52,7 +72,8 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subn
         placement=zone,
         disable_api_termination=False,
         subnet_id=subnet,
-        user_data=user_data
+        user_data=user_data,
+        block_device_map = mapping
     )
     instance = instance_info.instances[0]
     for attempt in range(20):
@@ -89,59 +110,59 @@ def deploy_ec2_ami(name, ami, size, zone, region, basedn, ldaphost, secret, subn
 # These Are The Subnet Specific Tasks For Each AZ In EC2
 ###
 
-def deploy_west_ec2_ami(name, size='m1.small'):
+def deploy_west_ec2_ami(name, ephemeral, size='m1.small'):
     r=config.get_devqa_west_conf()
-    ip_rid = deploy_ec2_ami(name, r.ami, size, r.zone, r.region, r.basedn, r.ldap, r.secret, r.subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
+    ip_rid = deploy_ec2_ami(name, r.ami, size, r.zone, r.region, r.basedn, r.ldap, r.secret, r.subnet, r.sgroup, r.domain, r.puppetmaster, r.admin, ephemeral)
     return ip_rid
 
-def deploy_east_1a_public_1(name, size='m1.small', subnet='subnet-c7fac5af', zone='us-east-1a', sgroup='sg-98c326f7'):
+def deploy_east_1a_public_1(name, ephemeral, size='m1.small', subnet='subnet-c7fac5af', zone='us-east-1a', sgroup='sg-98c326f7'):
     r=config.get_prod_east_conf()
-    ip_rid = deploy_ec2_ami(name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster, r.admin)
+    ip_rid = deploy_ec2_ami(name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster, r.admin, ephemeral)
     return ip_rid
 
-def deploy_east_1a_private_2(name, size='m1.small', subnet='subnet-dafac5b2', zone='us-east-1a'):
+def deploy_east_1a_private_2(name, ephemeral, size='m1.small', subnet='subnet-dafac5b2', zone='us-east-1a'):
     r=config.get_prod_east_conf()
-    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
+    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin, ephemeral)
     return ip_rid
 
-def deploy_east_1c_public_3(name, size='m1.small', subnet='subnet-1d373375', zone='us-east-1c', sgroup='sg-98c326f7'):
+def deploy_east_1c_public_3(name, ephemeral, size='m1.small', subnet='subnet-1d373375', zone='us-east-1c', sgroup='sg-98c326f7'):
     r=config.get_prod_east_conf()
-    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster, r.admin)
+    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster, r.admin, ephemeral)
     return ip_rid
 
-def deploy_east_1c_private_4(name, size='m1.small', subnet='subnet-ed373385', zone='us-east-1c'):
+def deploy_east_1c_private_4(name, ephemeral, size='m1.small', subnet='subnet-ed373385', zone='us-east-1c'):
     r=config.get_prod_east_conf()
-    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
+    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin, ephemeral)
     return ip_rid
 
-def deploy_east_1d_private_6(name, size='m1.small', subnet='subnet-8d2632e5', zone='us-east-1d'):
+def deploy_east_1d_private_6(name, ephemeral, size='m1.small', subnet='subnet-8d2632e5', zone='us-east-1d'):
     r=config.get_prod_east_conf()
-    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
+    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin, ephemeral)
     return ip_rid
 
-def deploy_west_2a_public_1(name, size='m1.small', subnet='subnet-105def79', zone='us-west-2a', sgroup='sg-92f0e2fe'):
+def deploy_west_2a_public_1(name, ephemeral, size='m1.small', subnet='subnet-105def79', zone='us-west-2a', sgroup='sg-92f0e2fe'):
     r=config.get_pqa_west_conf()
-    ip_rid = deploy_ec2_ami(name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster, r.admin)
+    ip_rid = deploy_ec2_ami(name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster, r.admin, ephemeral)
     return ip_rid
 
-def deploy_west_2a_private_2(name, size='m1.small', subnet='subnet-165def7f', zone='us-west-2a'):
+def deploy_west_2a_private_2(name, ephemeral, size='m1.small', subnet='subnet-165def7f', zone='us-west-2a'):
     r=config.get_pqa_west_conf()
-    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
+    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin, ephemeral)
     return ip_rid
 
-def deploy_west_2b_public_3(name, size='m1.small', subnet='subnet-ef5def86', zone='us-west-2b', sgroup='sg-92f0e2fe'):
+def deploy_west_2b_public_3(name, ephemeral, size='m1.small', subnet='subnet-ef5def86', zone='us-west-2b', sgroup='sg-92f0e2fe'):
     r=config.get_pqa_west_conf()
-    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster, r.admin)
+    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, sgroup, r.domain, r.puppetmaster, r.admin, ephemeral)
     return ip_rid
 
-def deploy_west_2b_private_4(name, size='m1.small', subnet='subnet-e05def89', zone='us-west-2b'):
+def deploy_west_2b_private_4(name, ephemeral, size='m1.small', subnet='subnet-e05def89', zone='us-west-2b'):
     r=config.get_pqa_west_conf()
-    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
+    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin, ephemeral)
     return ip_rid
 
-def deploy_west_2c_private_6(name, size='m1.small', subnet='subnet-f85def91', zone='us-west-2c'):
+def deploy_west_2c_private_6(name, ephemeral, size='m1.small', subnet='subnet-f85def91', zone='us-west-2c'):
     r=config.get_pqa_west_conf()
-    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin)
+    ip_rid = deploy_ec2_ami (name, r.ami, size, zone, r.region, r.basedn, r.ldap, r.secret, subnet, r.sgroup, r.domain, r.puppetmaster, r.admin, ephemeral)
     return ip_rid
 
 
@@ -184,7 +205,7 @@ def allocate_elastic_ip(region='us-east-1'):
     creds = config.get_ec2_conf()
     ec2conn = connect_to_region(region, aws_access_key_id=creds['AWS_ACCESS_KEY_ID'], aws_secret_access_key=creds['AWS_SECRET_ACCESS_KEY']) 
     allocid = ec2conn.allocate_address(domain='vpc')
-    allocid = allocid.allocation_id
+    #allocid = allocid.allocation_id
     return allocid
 
 def associate_elastic_ip(elasticip, instance, region='us-east-1'):
@@ -348,39 +369,40 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
 ####
 #  3rd Party Deployment
 ####
-def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='pri'):
+def third_party_generic_deployment(appname,puppetClass,az,size='m1.small',dmz='pri', ephemeral=None):
     r=config.get_conf(az)
     num = mongod.mongodb_third_count(r.region,az,appname,dmz)
+    print num
     num = int(num) + 1
     num = "%02d" % num
     name= az+'-'+dmz+'-'+appname+'-'+num
 
     if dmz == 'pri':
         if az == 'use1a':
-            ip_rid = deploy_east_1a_private_2(name=name,size=size)
+            ip_rid = deploy_east_1a_private_2(name=name,size=size,ephemeral=ephemeral)
         if az == 'use1c':
-            ip_rid = deploy_east_1c_private_4(name=name,size=size)
+            ip_rid = deploy_east_1c_private_4(name=name,size=size,ephemeral=ephemeral)
         if az == 'use1d':
-            ip_rid = deploy_east_1d_private_6(name=name,size=size)
+            ip_rid = deploy_east_1d_private_6(name=name,size=size,ephemeral=ephemeral)
         if az == 'usw2a':
-            ip_rid = deploy_west_2a_private_2(name=name,size=size)
+            ip_rid = deploy_west_2a_private_2(name=name,size=size,ephemeral=ephemeral)
         if az == 'usw2b':
-            ip_rid = deploy_west_2b_private_4(name=name,size=size)
+            ip_rid = deploy_west_2b_private_4(name=name,size=size,ephemeral=ephemeral)
         if az == 'usw2c':
-            ip_rid = deploy_west_2c_private_6(name=name,size=size)
+            ip_rid = deploy_west_2c_private_6(name=name,size=size,ephemeral=ephemeral)
         if az == 'dev':
-            ip_rid = deploy_west_ec2_ami(name=name,size=size)
+            ip_rid = deploy_west_ec2_ami(name=name,size=size,ephemeral=ephemeral)
         if az == 'qa':
-            ip_rid = deploy_west_ec2_ami(name=name,size=size)
+            ip_rid = deploy_west_ec2_ami(name=name,size=size,ephemeral=ephemeral)
     elif dmz == 'pub':
         if az == 'use1a':
-            ip_rid = deploy_east_1a_public_1(name=name,size=size)
+            ip_rid = deploy_east_1a_public_1(name=name,size=size,ephemeral=ephemeral)
         if az == 'use1c':
-            ip_rid = deploy_east_1c_public_3(name=name,size=size)
+            ip_rid = deploy_east_1c_public_3(name=name,size=size,ephemeral=ephemeral)
         if az == 'usw2a':
-            ip_rid = deploy_west_2a_public_1(name=name,size=size)
+            ip_rid = deploy_west_2a_public_1(name=name,size=size,ephemeral=ephemeral)
         if az == 'usw2b':
-            ip_rid = deploy_west_2b_public_3(name=name,size=size)
+            ip_rid = deploy_west_2b_public_3(name=name,size=size,ephemeral=ephemeral)
     else:
         print "ERROR: Wrong dmz specified"
 
@@ -486,6 +508,7 @@ def setup_four_drive_mirror():
     sudo('dd if=/dev/urandom of=/etc/data.key bs=1 count=32')
     time.sleep(5)
     sudo('cat /etc/data.key | cryptsetup luksFormat /dev/md0')
+    time.sleep(5)
     sudo('cat /etc/data.key | cryptsetup luksOpen /dev/md0 data')
 
 def setup_two_drive_mirror():
@@ -508,6 +531,25 @@ def setup_two_drive_mirror():
     sudo('cat /etc/data.key | cryptsetup luksFormat /dev/md0')
     sudo('cat /etc/data.key | cryptsetup luksOpen /dev/md0 data')
 
+def setup_four_drive_stripe():
+    env.warn_only = True
+    sudo('umount /mnt')
+    sudo('puppet agent -t')
+    env.warn_only = False
+    sudo('mdadm --create --force --assume-clean -R /dev/md0 -l0 --chunk=256 --raid-devices=4 /dev/xvdb /dev/xvdc /dev/xvdd /dev/xvde')
+    sudo('echo "`mdadm --detail --scan`" | tee -a /etc/mdadm.conf')
+    sudo('blockdev --setra 128 /dev/md0')
+    sudo('blockdev --setra 128 /dev/xvdb')
+    sudo('blockdev --setra 128 /dev/xvdc')
+    sudo('blockdev --setra 128 /dev/xvdd')
+    sudo('blockdev --setra 128 /dev/xvde')
+    sudo('dd if=/dev/urandom of=/etc/data.key bs=1 count=32')
+    time.sleep(5)
+    sudo('cat /etc/data.key | cryptsetup luksFormat /dev/md0')
+    time.sleep(5)
+    sudo('cat /etc/data.key | cryptsetup luksOpen /dev/md0 data')
+
+
 def setup_mongodb_lvm():
     sudo('pvcreate /dev/mapper/data')
     sudo('vgcreate datavg /dev/mapper/data')
@@ -524,39 +566,24 @@ def setup_mongodb_lvm():
     sudo('chown -R mongodb:mongodb /data/')
     sudo('chown -R mongodb:mongodb /journal/')
 
-def setup_gluster_lvm():
+def setup_data_lvm():
     sudo('pvcreate /dev/mapper/data')
     sudo('vgcreate datavg /dev/mapper/data')
-    sudo('lvcreate -l 100%vg -n datalv datavg')
+    sudo('lvcreate -l 80%vg -n datalv datavg')
     sudo('mke2fs -t ext4 -F /dev/datavg/datalv')
     sudo('echo "/dev/datavg/datalv  /data   ext4    defaults,auto,noatime,noexec    0       0" | tee -a /etc/fstab')
     sudo('mkdir -p /data/')
     sudo('mount -a')
 
-def setup_rabbit_lvm():
-    sudo('pvcreate /dev/mapper/data')
-    sudo('vgcreate datavg /dev/mapper/data')
-    sudo('lvcreate -l 100%vg -n datalv datavg')
-    sudo('mke2fs -t ext4 -F /dev/datavg/datalv')
-    sudo('echo "/dev/datavg/datalv  /data   ext4    defaults,auto,noatime,noexec    0       0" | tee -a /etc/fstab')
-    sudo('mkdir -p /data/')
-    sudo('mount -a')
-    sudo('chown -R rabbitmq:rabbitmq /data/')
-    sudo('service rabbitmq-server stop')
-    sudo('rm -rf /var/lib/rabbitmq/')
-    sudo('ln -s /data/ /var/lib/rabbitmq')
-    sudo('service rabbitmq-server start')
-
 ####
-# Generic Deploy 5 Nodes with 4 Raid 0 EBS Volumes
+# Generic Deploy Nodes with Raid 10 EBS Volumes
 ####
 
-def deploy_one_node_with_10_ebs_io_volumes_raid_0(az,appname,puppetClass,iops='yes',capacity='100',size='m1.xlarge'):
+def deploy_one_node_with_10_ebs_io_volumes_raid_10(az,appname,puppetClass,iops='yes',capacity='100',size='m1.xlarge'):
     r=config.get_conf(az)
     ip_rid = third_party_generic_deployment(appname=appname,puppetClass=puppetClass,az=az,size=size,dmz='pri')
     rid = ip_rid['rid']
     ip = ip_rid['ip']
-    time.sleep(120)
     for lun in ['/dev/sdf', '/dev/sdg', '/dev/sdh', '/dev/sdi', '/dev/sdj', '/dev/sdk', '/dev/sdl', '/dev/sdm', '/dev/sdn', '/dev/sdo']:
         ebs_vol = create_ebs_volume(az=az,iops=iops,size=capacity)
         attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
@@ -565,7 +592,7 @@ def deploy_one_node_with_10_ebs_io_volumes_raid_0(az,appname,puppetClass,iops='y
     execute(setup_ten_drive_mirror, host=ip)
     return ip
 
-def deploy_five_nodes_with_4_ebs_volumes_raid_0(az,appname,puppetClass,iops='no',capacity='100',size='m1.xlarge'):
+def deploy_five_nodes_with_4_ebs_volumes_raid_10(az,appname,puppetClass,iops='no',capacity='100',size='m1.xlarge'):
     r=config.get_conf(az)
     iplist = []
     if az in ['use1a', 'use1c', 'use1d']:
@@ -573,10 +600,10 @@ def deploy_five_nodes_with_4_ebs_volumes_raid_0(az,appname,puppetClass,iops='no'
             ip_rid = third_party_generic_deployment(appname=appname,puppetClass=puppetClass,az=azloop,size=size,dmz='pri')
             rid = ip_rid['rid']
             ip = ip_rid['ip']
-            iplist.append(ip) 
-            time.sleep(120)
+            iplist.append(ip)
             for lun in ['/dev/sdf', '/dev/sdg', '/dev/sdh', '/dev/sdi']:
                 ebs_vol = create_ebs_volume(az=azloop,iops=iops,size=capacity)
+                time.sleep(5)
                 attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
     if az in ['usw2a', 'usw2b', 'usw2c']:
         for azloop in ['usw2a', 'usw2a', 'usw2b', 'usw2b', 'usw2c']:
@@ -584,16 +611,16 @@ def deploy_five_nodes_with_4_ebs_volumes_raid_0(az,appname,puppetClass,iops='no'
             rid = ip_rid['rid']
             ip = ip_rid['ip']
             iplist.append(ip)
-            time.sleep(120)
             for lun in ['/dev/sdf', '/dev/sdg', '/dev/sdh', '/dev/sdi']:
                 ebs_vol = create_ebs_volume(az=azloop,iops=iops,size=capacity)
+                time.sleep(5)
                 attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
     time.sleep(300)
     env.parallel = True
     execute(setup_four_drive_mirror, hosts=iplist)
     return iplist
 
-def deploy_three_nodes_with_2_ebs_volumes_raid_0(az,appname,puppetClass,iops='no',capacity='50',size='m1.medium'):
+def deploy_three_nodes_with_2_ebs_volumes_raid_10(az,appname,puppetClass,iops='no',capacity='50',size='m1.medium'):
     r=config.get_conf(az)
     iplist = []
     if az in ['use1a', 'use1c', 'use1d']:
@@ -602,7 +629,6 @@ def deploy_three_nodes_with_2_ebs_volumes_raid_0(az,appname,puppetClass,iops='no
             rid = ip_rid['rid']
             ip = ip_rid['ip']
             iplist.append(ip)
-            time.sleep(120)
             for lun in ['/dev/sdf', '/dev/sdg']:
                 ebs_vol = create_ebs_volume(az=azloop,iops=iops,size=capacity)
                 attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
@@ -612,13 +638,37 @@ def deploy_three_nodes_with_2_ebs_volumes_raid_0(az,appname,puppetClass,iops='no
             rid = ip_rid['rid']
             ip = ip_rid['ip']
             iplist.append(ip)
-            time.sleep(120)
             for lun in ['/dev/sdf', '/dev/sdg', '/dev/sdh', '/dev/sdi']:
                 ebs_vol = create_ebs_volume(az=azloop,iops=iops,size=capacity)
                 attach_ebs_volume(device=lun, ebs_vol=ebs_vol, rid=rid, region=r.region)
     time.sleep(300)
     env.parallel = True
     execute(setup_two_drive_mirror, hosts=iplist)
+    return iplist
+
+####
+# Generic Deploy With Ephemeral Storage
+####
+
+def deploy_five_nodes_with_striped_ephemeral_storage(az,appname,puppetClass,size='m1.xlarge'):
+    r=config.get_conf(az)
+    iplist = []
+    if az in ['use1a', 'use1c', 'use1d']:
+        for azloop in ['use1a', 'use1a', 'use1c', 'use1c', 'use1d']:
+            ip_rid = third_party_generic_deployment(appname=appname,puppetClass=puppetClass,az=azloop,size=size,dmz='pri',ephemeral=True)
+            rid = ip_rid['rid']
+            ip = ip_rid['ip']
+            iplist.append(ip)
+    if az in ['usw2a', 'usw2b', 'usw2c']:
+        for azloop in ['usw2a', 'usw2a', 'usw2b', 'usw2b', 'usw2c']:
+            ip_rid = third_party_generic_deployment(appname=appname,puppetClass=puppetClass,az=azloop,size=size,dmz='pri',ephemeral=True)
+            rid = ip_rid['rid']
+            ip = ip_rid['ip']
+            iplist.append(ip)
+    time.sleep(300)
+    env.parallel = True
+    execute(setup_four_drive_stripe, hosts=iplist)
+    execute(setup_data_lvm, hosts=iplist)
     return iplist
 
 ####
@@ -633,11 +683,12 @@ def deploy_five_node_mongodb_replica_set(az, shard='1', setname='mongo', app='sl
         print (red("PROBLEM: Shard '%s' Already Exists")%(shard))
         sys.exit(0)
     appname = app+'-mongodb-s'+shard
-    iplist = deploy_five_nodes_with_4_ebs_volumes_raid_0(az=az,appname=appname,puppetClass='mongodb')
+    iplist = deploy_five_nodes_with_4_ebs_volumes_raid_10(az=az,appname=appname,puppetClass='mongodb')
     execute(setup_mongodb_lvm, hosts=iplist)
     execute(mongod.start, hosts=iplist)
     time.sleep(180)
     execute(mongod.create_five_node_mongo_cluster,host=iplist[0],setname=setname,node1=iplist[0],node2=iplist[1],node3=iplist[2],node4=iplist[3],node5=iplist[4])
+    return iplist
 
 def deploy_three_node_mongodb_replica_set(az, shard='1', setname='mongo', app='inf'):
     env.warn_only = False
@@ -647,7 +698,7 @@ def deploy_three_node_mongodb_replica_set(az, shard='1', setname='mongo', app='i
         print (red("PROBLEM: Shard '%s' Already Exists")%(shard))
         sys.exit(0)
     appname = app+'-mongodb-s'+shard
-    iplist = deploy_three_nodes_with_2_ebs_volumes_raid_0(az=az,appname=appname,puppetClass='mongodb')
+    iplist = deploy_three_nodes_with_2_ebs_volumes_raid_10(az=az,appname=appname,puppetClass='mongodb')
     execute(setup_mongodb_lvm, hosts=iplist)
     execute(mongod.start, hosts=iplist)
     time.sleep(180)
@@ -660,8 +711,8 @@ def deploy_three_node_mongodb_replica_set(az, shard='1', setname='mongo', app='i
 def deploy_five_node_gluster_cluster(az,app):
     env.warn_only = False
     appname = app+'-gluster'
-    iplist = deploy_five_nodes_with_4_ebs_volumes_raid_0(az=az,appname=appname,puppetClass='gluster')
-    execute(setup_gluster_lvm, hosts=iplist)
+    iplist = deploy_five_nodes_with_4_ebs_volumes_raid_10(az=az,appname=appname,puppetClass='gluster')
+    execute(setup_data_lvm, hosts=iplist)
 
 
 def main():

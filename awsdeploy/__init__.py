@@ -36,10 +36,6 @@ def deploy_cheetah(version, az='dev', count='1', size='m1.large'):
 def deploy_redis(az='dev'):
     aws.third_party_generic_deployment(appname='redis',puppetClass='redis',az=az,size='m1.small')
 
-@task
-def deploy_apt_repo(az='dev'):
-    aws.third_party_generic_deployment(appname='apt',puppetClass='puppet',az=az,size='m1.small')
-
 ####
 # Zookeeper Deployment
 ####
@@ -123,23 +119,22 @@ def deploy_graylog2(az='dev'):
 
 @task
 def deploy_rabbitmq(appname,az='dev'):
-    ip = aws.deploy_one_node_with_10_ebs_io_volumes_raid_0(appname=appname+'-rabbitmq',puppetClass=('rabbitmq','stdlib'),az=az,size='m1.xlarge')
-    execute(aws.setup_rabbit_lvm,hosts=ip)
+    ip = aws.deploy_one_node_with_10_ebs_io_volumes_raid_10(appname=appname+'-rabbitmq',puppetClass=('rabbitmq','stdlib'),az=az,size='m1.xlarge')
+    execute(aws.setup_data_lvm,hosts=ip)
+    sudo('chown -R rabbitmq:rabbitmq /data/')
+    sudo('service rabbitmq-server stop')
+    sudo('rm -rf /var/lib/rabbitmq/')
+    sudo('ln -s /data/ /var/lib/rabbitmq')
+    sudo('service rabbitmq-server start')
+
 
 ####
 # Cassandra Deployment
 ####
 
 @task
-def deploy_three_node_cassandra(appname,az='dev'):
-    iplist = deploy_three_nodes_with_2_ebs_volumes_raid_0(az=az,appname=appname+'-cassandra',puppetClass=('java','cassandra'),iops='no',capacity='100',size='m1.xlarge')
-    execute(aws.setup_gluster_lvm,hosts=iplist)
-
-@task
 def deploy_five_node_cassandra(appname,az='dev'):
-    iplist = deploy_five_nodes_with_4_ebs_volumes_raid_0(az=az,appname=appname+'-cassandra',puppetClass=('java','cassandra'),iops='no',capacity='100',size='m1.xlarge')
-    execute(aws.setup_gluster_lvm,hosts=iplist)
-    execute(cassandra.move_cassandra_home_to_data_cassandra,hosts=iplist)
+    iplist = deploy_five_nodes_with_striped_ephemeral_storage(az=az,appname=appname+'-cassandra',puppetClass=('java','cassandra'))
 
 ####
 # Load Balancer Deployment
@@ -156,29 +151,20 @@ def deploy_pub_loadbalancers(appname,az):
     allocid = aws.allocate_elastic_ip(region=r.region)
     ip_rid = aws.third_party_generic_deployment(appname='haproxy-'+appname,puppetClass=('haproxy','stud','nodejs'),az=az,size='m1.small',dmz='pub')
     rid = ip_rid['rid']
-    time.sleep(30)
-    aws.associate_elastic_ip(elasticip=allocid,instance=rid,region=r.region)
+    aws.associate_elastic_ip(elasticip=allocid.allocation_id,instance=rid,region=r.region)
+    mongod.add_public_ip(region=r.region,rid=rid,elastic_ip=allocid.public_ip)
+    iplist = []
+    iplist.append(ip_rid['ip'])
+    return iplist
 
 ####
 # Mongodb Deployment
 ####
 
-@task
-def deploy_mongodb_replica_set_sl(az,shard):
-    deploy_five_node_mongodb_replica_set(az,shard=shard,app='sl')
 
 @task
-def deploy_mongodb_replica_set_gt(az,shard):
-    deploy_five_node_mongodb_replica_set(az,shard=shard,app='gt')
-
-@task
-def deploy_mongodb_replica_set_inf(az,shard):
-    deploy_three_node_mongodb_replica_set(az,shard=shard,app='inf')
-
-@task
-def deploy_mongodb_replica_set_gl2(az,shard):
-    deploy_three_node_mongodb_replica_set(az,shard=shard,app='gl2')
-
+def deploy_mongodb_replica_set(az,shard,app):
+    deploy_five_node_mongodb_replica_set(az=az,shard=shard,app=app)
 
 ###
 # Gluster Deployment
@@ -199,6 +185,14 @@ def deploy_nimbus(appname,az='dev'):
 @task
 def deploy_storm(appname,az='dev'):
     aws.third_party_generic_deployment(appname=appname+'-storm',puppetClass=('java','storm::supervisor'),az=az,size='m1.small')
+
+###
+# Apt Deployment
+###
+
+@task
+def deploy_aptrepo(az='dev'):
+    aws.third_party_generic_deployment(appname='apt',puppetClass='aptrepo',az=az,size='m1.small')
     
 ####
 # Remove An Instance

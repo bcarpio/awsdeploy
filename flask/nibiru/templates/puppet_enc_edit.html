@@ -91,6 +91,12 @@
                     <td nowrap>IP Address:</td>
                     <td nowrap>{{node_meta_data['ip_addr']}}</td>
                 </tr>
+                {% if 'elastic_ip' in node_meta_data %}
+ 				<tr>
+                    <td nowrap>Elastic IP Address:</td>
+                    <td nowrap>{{node_meta_data['elastic_ip']}}</td>
+                </tr>
+                {% endif %}               
 				<tr>
                     <td nowrap>Archecture:</td>
                     <td nowrap>{{node_meta_data['architecture']}}</td>

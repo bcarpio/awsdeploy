@@ -83,7 +83,7 @@ def mongodb_app_count(region,az,appname,version,dmz):
     host = puppet_config['host']
     con = Connection(host)
     col = con[database][collection]
-    nodes = nodes = col.find({ 'node' : { '$regex' : '^'+az+'-'+dmz+'-'+appname+'-'+version+'-.*'}})
+    nodes = col.find({ 'node' : { '$regex' : '^'+az+'-'+dmz+'-'+appname+'-'+version+'-.*'}})
     num = 0
     for node in nodes:
         if node:
@@ -101,6 +101,7 @@ def mongodb_third_count(region,az,appname,dmz):
     nodes = col.find({ 'node' : { '$regex' : '^'+az+'-'+dmz+'-'+appname+'-.*'}})
     num = 0
     for node in nodes:
+        print node
         if node:
             node = node['node'].split('.')[0]
             num = node.split('-')[-1] 
@@ -135,3 +136,12 @@ def add_meta_data(region,name,instance_info):
     d['root_device_type'] = instance_info.instances[0].__dict__['root_device_type']
     d['subnet_id'] = instance_info.instances[0].__dict__['subnet_id']
     col.insert(d)
+
+def add_public_ip(region,rid,elastic_ip):
+    puppet_config = config.puppet_enc(region)
+    database = puppet_config['database']
+    collection = puppet_config['meta_collection']
+    host = puppet_config['host']
+    con = Connection(host)
+    col = con[database][collection]
+    col.update({'instance_id' : rid}, {"$set" : {'elastic_ip': elastic_ip}})
