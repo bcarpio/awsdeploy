@@ -83,7 +83,7 @@ def mongodb_app_count(region,az,appname,version,dmz):
     host = puppet_config['host']
     con = Connection(host)
     col = con[database][collection]
-    nodes = nodes = col.find({ 'node' : { '$regex' : '^'+az+'-'+dmz+'-'+appname+'-'+version+'-.*'}})
+    nodes = col.find({ 'node' : { '$regex' : '^'+az+'-'+dmz+'-'+appname+'-'+version+'-.*'}})
     num = 0
     for node in nodes:
         if node:
@@ -101,6 +101,7 @@ def mongodb_third_count(region,az,appname,dmz):
     nodes = col.find({ 'node' : { '$regex' : '^'+az+'-'+dmz+'-'+appname+'-.*'}})
     num = 0
     for node in nodes:
+        print node
         if node:
             node = node['node'].split('.')[0]
             num = node.split('-')[-1] 

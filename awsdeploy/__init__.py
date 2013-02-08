@@ -119,23 +119,22 @@ def deploy_graylog2(az='dev'):
 
 @task
 def deploy_rabbitmq(appname,az='dev'):
-    ip = aws.deploy_one_node_with_10_ebs_io_volumes_raid_0(appname=appname+'-rabbitmq',puppetClass=('rabbitmq','stdlib'),az=az,size='m1.xlarge')
-    execute(aws.setup_rabbit_lvm,hosts=ip)
+    ip = aws.deploy_one_node_with_10_ebs_io_volumes_raid_10(appname=appname+'-rabbitmq',puppetClass=('rabbitmq','stdlib'),az=az,size='m1.xlarge')
+    execute(aws.setup_data_lvm,hosts=ip)
+    sudo('chown -R rabbitmq:rabbitmq /data/')
+    sudo('service rabbitmq-server stop')
+    sudo('rm -rf /var/lib/rabbitmq/')
+    sudo('ln -s /data/ /var/lib/rabbitmq')
+    sudo('service rabbitmq-server start')
+
 
 ####
 # Cassandra Deployment
 ####
 
 @task
-def deploy_three_node_cassandra(appname,az='dev'):
-    iplist = deploy_three_nodes_with_2_ebs_volumes_raid_0(az=az,appname=appname+'-cassandra',puppetClass=('java','cassandra'),iops='no',capacity='100',size='m1.xlarge')
-    execute(aws.setup_gluster_lvm,hosts=iplist)
-
-@task
 def deploy_five_node_cassandra(appname,az='dev'):
-    iplist = deploy_five_nodes_with_4_ebs_volumes_raid_0(az=az,appname=appname+'-cassandra',puppetClass=('java','cassandra'),iops='no',capacity='100',size='m1.xlarge')
-    execute(aws.setup_gluster_lvm,hosts=iplist)
-    execute(cassandra.move_cassandra_home_to_data_cassandra,hosts=iplist)
+    iplist = deploy_five_nodes_with_striped_ephemeral_storage(az=az,appname=appname+'-cassandra',puppetClass=('java','cassandra'))
 
 ####
 # Load Balancer Deployment
