@@ -237,8 +237,10 @@ def get_aws_deployment_status():
         hide('running', 'stdout')
     ):
         env.warn_only = True
-        status = run('ls -al /var/tmp/finished > /dev/null 2>&1; echo $?')
-        return status
+        finishedFilePresent = int(run('ls -al /var/tmp/finished > /dev/null 2>&1; echo $?')) == 0
+        aptNotRunning = int(run('ps -e | grep -e apt -e adept > /dev/null 2>&1; echo $?')) == 1
+        print "finishedFilePresent: " + str(finishedFilePresent) + ", aptNotRunning: " + str(aptNotRunning)
+        return finishedFilePresent & aptNotRunning
 
 ###
 # This Updates LDAP With The Right Puppet Classes
@@ -320,9 +322,9 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
     else:
         env.parallel = True
 
-    status = 1
+    status = False
     runs = 0
-    while status != 0:
+    while status != True:
         if runs > 60:
             print ("Timeout waiting for puppet to finish")
             print (red("PROBLEM: Deployment Failed"))
@@ -330,13 +332,14 @@ def app_deploy_generic(appname, version, az, count='1', puppetClass='nodejs', si
         with settings(warn_only=True):
            try:
                get_status = execute(get_aws_deployment_status, hosts=iplist)
-               total = 0
+               # If all the statuses are True then it will be True, otherwise False
+               status = True
                for s in get_status.values():
-                   s = int(s)
-                   status = total + s
+                   status = status & s
            except BaseException as e:
-               status = 1
+               status = False
                print("Error getting status")
+               print(e)
         time.sleep(10)
         runs += 1
     disconnect_all()
