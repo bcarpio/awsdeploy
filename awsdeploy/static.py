@@ -11,7 +11,7 @@ import time
 @task
 def deploy_static_version_cdn(az,appname,version,package_file):
     r=config.get_conf(az)
-    execute(deploy_static_cdn,appname,version,package_file,hosts=r.static)
+    execute(deploy_static_cdn,appname,version,package_file,hosts=[r.static])
 
 @task
 def deploy_static_cdn(appname,version,package_file):
