@@ -145,3 +145,12 @@ def add_public_ip(region,rid,elastic_ip):
     con = Connection(host)
     col = con[database][collection]
     col.update({'instance_id' : rid}, {"$set" : {'elastic_ip': elastic_ip}})
+
+@task
+def wait_for_start():
+    log = ''
+    while log.find('local.2') == -1: 
+        time.sleep(10)
+        log = run('grep "done allocating datafile /data/db.1/local.2" /var/log/mongodb/mongodb.log')
+    print('Mongo startup complete') 
+
