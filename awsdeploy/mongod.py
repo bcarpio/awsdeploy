@@ -13,14 +13,14 @@ import time
 def rs_initiate():
     """ Initiate Replica Set On A Single Host  \
     Usage: fab -H <somehost> mongod.rs_initiate"""
-    mongod.wait_for_start()
+    wait_for_start()
     run ('echo "rs.initiate()" | mongo')
 
 @task
 def rs_add(member):
     """ Add A Member To The Replica Set, Must Be Run On PRIMARY \
     Usage: fab -H <primary_replica_set_member> mongod.rs_add:<new_member_host_name> """
-    mongod.wait_for_start()
+    wait_for_start()
     run ('echo "rs.add(\'%s\')" | mongo' %(member))
 
 @task
@@ -148,7 +148,6 @@ def add_public_ip(region,rid,elastic_ip):
     col = con[database][collection]
     col.update({'instance_id' : rid}, {"$set" : {'elastic_ip': elastic_ip}})
 
-@task
 def wait_for_start():
     log = ''
     while log.find('local.2') == -1: 
