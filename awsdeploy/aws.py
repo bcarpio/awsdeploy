@@ -580,6 +580,17 @@ def setup_data_lvm():
 # Generic Deploy Nodes with Raid 10 EBS Volumes
 ####
 
+def deploy_node_with_ebs_volume(az,appname,puppetClass,capacity='50',size='m1.medium',iops='no'):
+    r=config.get_conf(az)
+    ip_rid = third_party_generic_deployment(appname=appname,puppetClass=puppetClass,az=az,size=size,dmz='pri')
+    rid = ip_rid['rid']
+    ip = ip_rid['ip']
+    ebs_vol = create_ebs_volume(az=az,iops=iops,size=capacity)
+    attach_ebs_volume(device='/dev/sdf', ebs_vol=ebs_vol, rid=rid, region=r.region)
+    time.sleep(300)
+    env.parallel = True
+    return ip
+
 def deploy_one_node_with_10_ebs_io_volumes_raid_10(az,appname,puppetClass,iops='yes',capacity='100',size='m1.xlarge'):
     r=config.get_conf(az)
     ip_rid = third_party_generic_deployment(appname=appname,puppetClass=puppetClass,az=az,size=size,dmz='pri')
