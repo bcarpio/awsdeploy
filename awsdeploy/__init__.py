@@ -174,6 +174,10 @@ def deploy_mongodb_replica_set(az,shard,app):
 def deploy_gluster(az,app):
     deploy_five_node_gluster_cluster(az,app=app)
 
+@task
+def deploy_thrid_party_generic_with_ebs(az,appname,puppetClass=('java','nodejs'),capacity='50',size='m1.medium'):
+    aws.deploy_node_with_ebs_volume(az,appname,puppetClass,capacity,size)
+
 ###
 # Storm Deployment
 ###
