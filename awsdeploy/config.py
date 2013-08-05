@@ -8,7 +8,7 @@ def get_prod_east_conf():
     r.ami='ami-82fa58eb'
     r.region='us-east-1'
     r.basedn='dc=social,dc=local'
-    r.ldap='10.201.2.176'
+    r.ldap='10.201.2.185'
     r.secret='secret'
     r.sgroup='sg-92c326fd'
     r.domain='social.local'
